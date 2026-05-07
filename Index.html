@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+  <!-- PWA / iOS home screen -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Lightning Log" />
+  <meta name="theme-color" content="#0a0e1a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+
+  <title>Lightning Log</title>
+
+  <!-- Inline SVG icon via data URI for apple-touch-icon -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%230a0e1a'/%3E%3Ctext x='90' y='125' font-size='100' text-anchor='middle'%3E%E2%9A%A1%3C/text%3E%3C/svg%3E" />
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+
+    :root {
+      --bg:       #0a0e1a;
+      --surface:  #111827;
+      --surface2: #0d1424;
+      --border:   #1e2d50;
+      --text:     #e8eaf0;
+      --muted:    #5a7ab0;
+      --dim:      #3a5080;
+      --cyan:     #00e5ff;
+      --teal:     #00c9a7;
+      --amber:    #f0b429;
+      --orange:   #f97316;
+      --blue:     #38bdf8;
+      --violet:   #a78bfa;
+      --red:      #ef4444;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bot: env(safe-area-inset-bottom, 0px);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', -apple-system, sans-serif;
+      overscroll-behavior: none;
+    }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+      max-width: 430px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    /* ── Header ─────────────────────────────────────────── */
+    #header {
+      background: linear-gradient(135deg, #0d1629 0%, #1a2440 100%);
+      padding: calc(var(--safe-top) + 16px) 20px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .header-bolt { font-size: 30px; line-height: 1; }
+    .header-title { font-size: 21px; font-weight: 700; letter-spacing: -0.5px; }
+    .header-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+    /* ── Body ───────────────────────────────────────────── */
+    #body {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 16px 16px 8px;
+    }
+
+    /* ── Nav ────────────────────────────────────────────── */
+    #nav {
+      display: flex;
+      background: #0d1424;
+      border-top: 1px solid var(--border);
+      padding-bottom: var(--safe-bot);
+      flex-shrink: 0;
+    }
+    .nav-btn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding: 10px 0 12px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--dim);
+      transition: color 0.15s;
+      font-family: inherit;
+    }
+    .nav-btn.active { color: var(--cyan); }
+    .nav-icon { font-size: 20px; line-height: 1; }
+    .nav-label { font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+
+    /* ── Shared ─────────────────────────────────────────── */
+    .section-head {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+      margin-top: 4px;
+    }
+
+    /* ── Stats grid ─────────────────────────────────────── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 14px 14px 12px;
+      border-top: 3px solid var(--cyan);
+    }
+    .stat-val {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+    }
+    .stat-unit { font-size: 12px; font-weight: 400; margin-left: 3px; opacity: 0.65; }
+    .stat-label { font-size: 11px; color: var(--muted); margin-top: 4px; font-weight: 500; letter-spacing: 0.3px; }
+
+    /* ── Chart ──────────────────────────────────────────── */
+    .chart-box {
+      display: flex;
+      align-items: flex-end;
+      gap: 5px;
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 16px 12px 10px;
+      margin-bottom: 10px;
+      height: 130px;
+    }
+    .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .bar {
+      width: 100%;
+      border-radius: 4px 4px 0 0;
+      min-height: 4px;
+      animation: growUp 0.6s ease forwards;
+      transform-origin: bottom;
+    }
+    @keyframes growUp { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+    .bar-top { font-size: 9px; color: var(--muted); line-height: 1; }
+    .bar-bot { font-size: 9px; color: var(--dim); font-weight: 600; }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 14px;
+      margin-bottom: 16px;
+      font-size: 10px;
+      color: var(--muted);
+    }
+    .legend-item { display: flex; align-items: center; gap: 5px; }
+    .legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+    .session-count { text-align: center; font-size: 11px; color: var(--dim); padding-bottom: 4px; }
+
+    /* ── Session cards ──────────────────────────────────── */
+    .session-card {
+      background: var(--surface);
+      border-radius: 12px;
+      margin-bottom: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .session-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 13px 14px;
+    }
+    .session-badge {
+      font-size: 11px;
+      font-weight: 700;
+      color: #0a0e1a;
+      padding: 3px 8px;
+      border-radius: 20px;
+      min-width: 30px;
+      text-align: center;
+    }
+    .session-main { flex: 1; display: flex; flex-direction: column; }
+    .session-kwh { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
+    .session-cost { font-size: 12px; color: var(--amber); font-weight: 600; margin-top: 2px; }
+    .session-meta { font-size: 11px; color: var(--muted); text-align: right; }
+    .chevron { font-size: 14px; color: var(--dim); margin-left: 4px; transition: transform 0.2s; display: inline-block; }
+    .chevron.open { transform: rotate(180deg); }
+
+    .session-detail {
+      padding: 0 14px 14px;
+      border-top: 1px solid #1a2440;
+      display: none;
+    }
+    .session-detail.open { display: block; }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+      margin-bottom: 12px;
+    }
+    .detail-item {
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 8px 6px;
+      text-align: center;
+    }
+    .detail-key { font-size: 9px; color: var(--dim); margin-bottom: 3px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+    .detail-val { font-size: 14px; font-weight: 700; color: var(--text); }
+    .delete-btn {
+      width: 100%;
+      padding: 10px;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 8px;
+      color: var(--red);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .empty {
+      text-align: center;
+      color: var(--dim);
+      margin-top: 60px;
+      font-size: 15px;
+      line-height: 1.8;
+    }
+
+    /* ── Add form ───────────────────────────────────────── */
+    .field-wrap { margin-bottom: 18px; }
+    .field-label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 7px;
+    }
+    .input-row { display: flex; align-items: stretch; }
+    .field-input {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-right: none;
+      border-radius: 10px 0 0 10px;
+      color: var(--text);
+      font-size: 17px;
+      padding: 13px 14px;
+      outline: none;
+      font-family: inherit;
+      -webkit-appearance: none;
+    }
+    .field-input:focus { border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(0,229,255,0.15); }
+    .field-unit {
+      background: #1a2440;
+      border: 1px solid var(--border);
+      border-left: none;
+      border-radius: 0 10px 10px 0;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 13px 11px;
+      min-width: 40px;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .add-btn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #0070f3, #00c9a7);
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: -0.3px;
+      margin-top: 8px;
+      -webkit-appearance: none;
+    }
+    .add-btn:active { opacity: 0.85; }
+
+    /* ── Toast ──────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: calc(var(--safe-bot) + 80px);
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--teal);
+      color: #0a0e1a;
+      padding: 10px 22px;
+      border-radius: 30px;
+      font-size: 13px;
+      font-weight: 700;
+      z-index: 999;
+      box-shadow: 0 4px 20px rgba(0,201,167,0.4);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── Views ──────────────────────────────────────────── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* hide number spinners */
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Header -->
+  <div id="header">
+    <div class="header-bolt">⚡</div>
+    <div>
+      <div class="header-title">Lightning Log</div>
+      <div class="header-sub">F-150 Lightning · Charging</div>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div id="body">
+    <!-- Dashboard -->
+    <div id="view-dashboard" class="view active">
+      <div class="section-head">Summary</div>
+      <div class="stat-grid" id="stat-grid"></div>
+      <div class="section-head">Sessions Overview</div>
+      <div class="chart-box" id="chart-box"></div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#00e5ff"></div><span>≥120 kW</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#00c9a7"></div><span>≥80 kW</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f0b429"></div><span>≥50 kW</span></div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ff6b6b"></div><span>&lt;50 kW</span></div>
+      </div>
+      <div class="session-count" id="session-count"></div>
+    </div>
+
+    <!-- Log -->
+    <div id="view-log" class="view">
+      <div class="section-head">All Sessions</div>
+      <div id="session-list"></div>
+    </div>
+
+    <!-- Add -->
+    <div id="view-add" class="view">
+      <div class="section-head">Log New Session</div>
+      <div class="field-wrap">
+        <label class="field-label">Time on Charger</label>
+        <div class="input-row">
+          <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 25" id="f-minutes" />
+          <div class="field-unit">min</div>
+        </div>
+      </div>
+      <div class="field-wrap">
+        <label class="field-label">kWh Delivered</label>
+        <div class="input-row">
+          <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 45.2" id="f-kwh" />
+          <div class="field-unit">kWh</div>
+        </div>
+      </div>
+      <div class="field-wrap">
+        <label class="field-label">Total Cost</label>
+        <div class="input-row">
+          <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 18.50" id="f-cost" />
+          <div class="field-unit">$</div>
+        </div>
+      </div>
+      <div class="field-wrap">
+        <label class="field-label">Miles Driven <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+        <div class="input-row">
+          <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 120" id="f-miles" />
+          <div class="field-unit">mi</div>
+        </div>
+      </div>
+      <button class="add-btn" id="add-btn">⚡ Add Session</button>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <div id="nav">
+    <button class="nav-btn active" data-view="dashboard">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">Stats</span>
+    </button>
+    <button class="nav-btn" data-view="log">
+      <span class="nav-icon">🗒</span>
+      <span class="nav-label">Sessions</span>
+    </button>
+    <button class="nav-btn" data-view="add">
+      <span class="nav-icon">＋</span>
+      <span class="nav-label">Add</span>
+    </button>
+  </div>
+
+  <div id="toast"></div>
+</div>
+
+<script>
+// ── Data ──────────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'lightning-log-sessions';
+const MILES_PER_KWH = 2.4231;
+
+const DEFAULT_SESSIONS = [
+  { id:1, minutes:7,  kwh:20.9, cost:8.12  },
+  { id:2, minutes:23, kwh:41.7, cost:16.22 },
+  { id:3, minutes:27, kwh:54.8, cost:23.05 },
+  { id:4, minutes:20, kwh:41.5, cost:17.01 },
+  { id:5, minutes:29, kwh:49.5, cost:20.81 },
+  { id:6, minutes:20, kwh:35.4, cost:14.52 },
+  { id:7, minutes:34, kwh:55.1, cost:21.46 },
+  { id:8, minutes:0,  kwh:75,   cost:15.0  },
+];
+
+function loadSessions() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : DEFAULT_SESSIONS;
+  } catch { return DEFAULT_SESSIONS; }
+}
+
+function saveSessions(sessions) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions)); } catch {}
+}
+
+let sessions = loadSessions();
+let expandedId = null;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const f2  = n => n.toFixed(2);
+const f1  = n => n.toFixed(1);
+const f0  = n => Math.round(n).toString();
+const fc  = n => '$' + n.toFixed(2);
+
+function speedColor(kw) {
+  if (kw >= 120) return '#00e5ff';
+  if (kw >= 80)  return '#00c9a7';
+  if (kw >= 50)  return '#f0b429';
+  return '#ff6b6b';
+}
+
+function sessionMiles(s) {
+  return (s.miles != null && !isNaN(s.miles)) ? s.miles : s.kwh * MILES_PER_KWH;
+}
+
+function sessionStats(s) {
+  const miles = sessionMiles(s);
+  const hasMiles = miles > 0;
+  return {
+    speed:    s.minutes > 0 ? (s.kwh / s.minutes) * 60 : 0,
+    cpm:      s.minutes > 0 ? s.cost / s.minutes : 0,
+    cpk:      s.kwh > 0 ? s.cost / s.kwh : 0,
+    miPkwh:   hasMiles && s.kwh > 0 ? miles / s.kwh : null,
+    whPmi:    hasMiles ? (s.kwh * 1000) / miles : null,
+    isEstMi:  s.miles == null,
+  };
+}
+
+
+function globalStats() {
+  const totalMin   = sessions.reduce((a, s) => a + s.minutes, 0);
+  const totalKwh   = sessions.reduce((a, s) => a + s.kwh, 0);
+  const totalCost  = sessions.reduce((a, s) => a + s.cost, 0);
+  const totalMiles = sessions.reduce((a, s) => a + sessionMiles(s), 0);
+  return {
+    totalMin, totalKwh, totalCost,
+    avgSpeed:    totalMin   > 0 ? (totalKwh / totalMin) * 60 : 0,
+    costPerKwh:  totalKwh   > 0 ? totalCost / totalKwh : 0,
+    costPerMin:  totalMin   > 0 ? totalCost / totalMin : 0,
+    milesAdded:  totalMiles,
+    costPerMile: totalMiles > 0 ? totalCost / totalMiles : 0,
+    avgMiPkwh:   totalKwh   > 0 && totalMiles > 0 ? totalMiles / totalKwh : 0,
+    avgWhPmi:    totalMiles > 0 ? (totalKwh * 1000) / totalMiles : 0,
+  };
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ── Render Dashboard ──────────────────────────────────────────────────────────
+function renderDashboard() {
+  const g = globalStats();
+  const cards = [
+    { label:'Total kWh',   value:f1(g.totalKwh),   unit:'kWh', color:'#00e5ff' },
+    { label:'Total Spent', value:fc(g.totalCost),  unit:'',    color:'#f0b429' },
+    { label:'Avg Speed',   value:f1(g.avgSpeed),   unit:'kW',  color:'#00c9a7' },
+    { label:'Cost / kWh',  value:fc(g.costPerKwh), unit:'',    color:'#a78bfa' },
+    { label:'Miles Added', value:f0(g.milesAdded),  unit:'mi',   color:'#f97316' },
+    { label:'Cost / Mile', value:fc(g.costPerMile), unit:'',     color:'#38bdf8' },
+    { label:'mi / kWh',    value:f2(g.avgMiPkwh),  unit:'mi/kWh',color:'#00c9a7'},
+    { label:'Wh / Mile',   value:f0(g.avgWhPmi),   unit:'Wh/mi',color:'#a78bfa' },
+  ];
+
+  document.getElementById('stat-grid').innerHTML = cards.map(c => `
+    <div class="stat-card" style="border-top-color:${c.color}">
+      <div class="stat-val" style="color:${c.color}">${c.value}<span class="stat-unit">${c.unit}</span></div>
+      <div class="stat-label">${c.label}</div>
+    </div>
+  `).join('');
+
+  const maxKwh = Math.max(...sessions.map(s => s.kwh), 1);
+  document.getElementById('chart-box').innerHTML = sessions.map(s => {
+    const ss = sessionStats(s);
+    const barH = Math.max(4, (s.kwh / maxKwh) * 90);
+    return `
+      <div class="bar-col">
+        <div class="bar-top">${f0(s.kwh)}</div>
+        <div class="bar" style="height:${barH}px;background:${speedColor(ss.speed)}"></div>
+        <div class="bar-bot">#${s.id}</div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('session-count').textContent = `${sessions.length} sessions recorded`;
+}
+
+// ── Render Log ────────────────────────────────────────────────────────────────
+function renderLog() {
+  const list = document.getElementById('session-list');
+  if (!sessions.length) {
+    list.innerHTML = '<div class="empty">No sessions yet.<br>Tap <b>Add</b> to log one.</div>';
+    return;
+  }
+
+  list.innerHTML = [...sessions].reverse().map(s => {
+    const ss = sessionStats(s);
+    const open = expandedId === s.id;
+    return `
+      <div class="session-card" data-id="${s.id}">
+        <div class="session-row">
+          <div class="session-badge" style="background:${speedColor(ss.speed)}">#${s.id}</div>
+          <div class="session-main">
+            <span class="session-kwh">${f1(s.kwh)} kWh</span>
+            <span class="session-cost">${fc(s.cost)}</span>
+          </div>
+          <div class="session-meta">${s.minutes} min · ${f0(ss.speed)} kW</div>
+          <span class="chevron ${open ? 'open' : ''}">▾</span>
+        </div>
+        <div class="session-detail ${open ? 'open' : ''}">
+          <div class="detail-grid">
+            <div class="detail-item"><div class="detail-key">Time</div><div class="detail-val">${s.minutes}m</div></div>
+            <div class="detail-item"><div class="detail-key">Energy</div><div class="detail-val">${f2(s.kwh)}</div></div>
+            <div class="detail-item"><div class="detail-key">Cost</div><div class="detail-val">${fc(s.cost)}</div></div>
+            <div class="detail-item"><div class="detail-key">Avg kW</div><div class="detail-val">${f1(ss.speed)}</div></div>
+            <div class="detail-item"><div class="detail-key">¢/min</div><div class="detail-val">${(ss.cpm*100).toFixed(1)}¢</div></div>
+            <div class="detail-item"><div class="detail-key">$/kWh</div><div class="detail-val">${fc(ss.cpk)}</div></div>
+            <div class="detail-item"><div class="detail-key">Miles</div><div class="detail-val">${s.miles != null ? f0(s.miles) : '~'+f0(s.kwh*MILES_PER_KWH)}</div></div>
+            <div class="detail-item"><div class="detail-key">mi/kWh</div><div class="detail-val">${ss.miPkwh != null ? f2(ss.miPkwh)+(ss.isEstMi?'~':'') : '—'}</div></div>
+            <div class="detail-item"><div class="detail-key">Wh/mi</div><div class="detail-val">${ss.whPmi != null ? f0(ss.whPmi)+(ss.isEstMi?'~':'') : '—'}</div></div>
+          </div>
+          <button class="delete-btn" data-delete="${s.id}">Delete Session</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── Nav switching ─────────────────────────────────────────────────────────────
+let currentView = 'dashboard';
+
+function switchView(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + view).classList.add('active');
+  document.querySelector(`[data-view="${view}"]`).classList.add('active');
+  document.getElementById('body').scrollTop = 0;
+  currentView = view;
+  if (view === 'dashboard') renderDashboard();
+  if (view === 'log') renderLog();
+}
+
+document.getElementById('nav').addEventListener('click', e => {
+  const btn = e.target.closest('[data-view]');
+  if (btn) switchView(btn.dataset.view);
+});
+
+// ── Session interactions ───────────────────────────────────────────────────────
+document.getElementById('session-list').addEventListener('click', e => {
+  // Delete
+  const del = e.target.closest('[data-delete]');
+  if (del) {
+    const id = parseInt(del.dataset.delete);
+    sessions = sessions.filter(s => s.id !== id);
+    saveSessions(sessions);
+    expandedId = null;
+    renderLog();
+    showToast('Session deleted');
+    return;
+  }
+  // Expand/collapse
+  const card = e.target.closest('.session-card');
+  if (card) {
+    const id = parseInt(card.dataset.id);
+    expandedId = expandedId === id ? null : id;
+    renderLog();
+  }
+});
+
+// ── Add session ───────────────────────────────────────────────────────────────
+document.getElementById('add-btn').addEventListener('click', () => {
+  const m = parseFloat(document.getElementById('f-minutes').value);
+  const k = parseFloat(document.getElementById('f-kwh').value);
+  const c = parseFloat(document.getElementById('f-cost').value);
+  const mi = parseFloat(document.getElementById('f-miles').value);
+
+  if (isNaN(m) || isNaN(k) || isNaN(c)) {
+    showToast('Fill in all fields'); return;
+  }
+
+  const newId = sessions.length ? Math.max(...sessions.map(s => s.id)) + 1 : 1;
+  sessions.push({ id: newId, minutes: m, kwh: k, cost: c, miles: isNaN(mi) ? null : mi });
+  saveSessions(sessions);
+
+  document.getElementById('f-minutes').value = '';
+  document.getElementById('f-kwh').value = '';
+  document.getElementById('f-cost').value = '';
+  document.getElementById('f-miles').value = '';
+
+  showToast('Session added ✓');
+  switchView('log');
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+renderDashboard();
+</script>
+</body>
+</html>
