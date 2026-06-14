@@ -330,6 +330,10 @@
     /* hide number spinners */
     input[type=number]::-webkit-inner-spin-button,
     input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+    /* date picker dark theme */
+    input[type=date] { color-scheme: dark; }
+    input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.7) sepia(1) saturate(2) hue-rotate(170deg); cursor: pointer; }
   </style>
 </head>
 <body>
@@ -370,6 +374,12 @@
     <!-- Add -->
     <div id="view-add" class="view">
       <div class="section-head">Log New Session</div>
+      <div class="field-wrap">
+        <label class="field-label">Date</label>
+        <div class="input-row">
+          <input class="field-input" type="date" id="f-date" style="border-radius:10px;border-right:1px solid var(--border)" />
+        </div>
+      </div>
       <div class="field-wrap">
         <label class="field-label">Time on Charger</label>
         <div class="input-row">
@@ -427,14 +437,14 @@ const STORAGE_KEY = 'lightning-log-sessions';
 const MILES_PER_KWH = 2.4231;
 
 const DEFAULT_SESSIONS = [
-  { id:1, minutes:7,  kwh:20.9, cost:8.12  },
-  { id:2, minutes:23, kwh:41.7, cost:16.22 },
-  { id:3, minutes:27, kwh:54.8, cost:23.05 },
-  { id:4, minutes:20, kwh:41.5, cost:17.01 },
-  { id:5, minutes:29, kwh:49.5, cost:20.81 },
-  { id:6, minutes:20, kwh:35.4, cost:14.52 },
-  { id:7, minutes:34, kwh:55.1, cost:21.46 },
-  { id:8, minutes:0,  kwh:75,   cost:15.0  },
+  { id:1, minutes:7,  kwh:20.9, cost:8.12,  date:'2026-05-03' },
+  { id:2, minutes:23, kwh:41.7, cost:16.22, date:'2026-05-09' },
+  { id:3, minutes:27, kwh:54.8, cost:23.05, date:'2026-05-14' },
+  { id:4, minutes:20, kwh:41.5, cost:17.01, date:'2026-05-20' },
+  { id:5, minutes:29, kwh:49.5, cost:20.81, date:'2026-05-26' },
+  { id:6, minutes:20, kwh:35.4, cost:14.52, date:'2026-06-01' },
+  { id:7, minutes:34, kwh:55.1, cost:21.46, date:'2026-06-07' },
+  { id:8, minutes:45, kwh:75,   cost:15.0,  date:'2026-06-13' },
 ];
 
 function loadSessions() {
@@ -456,6 +466,17 @@ const f2  = n => n.toFixed(2);
 const f1  = n => n.toFixed(1);
 const f0  = n => Math.round(n).toString();
 const fc  = n => '$' + n.toFixed(2);
+
+function fdate(dateStr) {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+
+function todayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 
 function speedColor(kw) {
   if (kw >= 120) return '#00e5ff';
@@ -563,13 +584,14 @@ function renderLog() {
           <div class="session-badge" style="background:${speedColor(ss.speed)}">#${s.id}</div>
           <div class="session-main">
             <span class="session-kwh">${f1(s.kwh)} kWh</span>
-            <span class="session-cost">${fc(s.cost)}</span>
+            <span class="session-cost">${fc(s.cost)}${s.date ? ' · ' + fdate(s.date) : ''}</span>
           </div>
           <div class="session-meta">${s.minutes} min · ${f0(ss.speed)} kW</div>
           <span class="chevron ${open ? 'open' : ''}">▾</span>
         </div>
         <div class="session-detail ${open ? 'open' : ''}">
           <div class="detail-grid">
+            ${s.date ? `<div class="detail-item" style="grid-column:1/-1;text-align:left;background:none;padding:0 0 4px"><div class="detail-key">Date</div><div class="detail-val" style="font-size:13px">${fdate(s.date)}</div></div>` : ''}
             <div class="detail-item"><div class="detail-key">Time</div><div class="detail-val">${s.minutes}m</div></div>
             <div class="detail-item"><div class="detail-key">Energy</div><div class="detail-val">${f2(s.kwh)}</div></div>
             <div class="detail-item"><div class="detail-key">Cost</div><div class="detail-val">${fc(s.cost)}</div></div>
@@ -599,6 +621,9 @@ function switchView(view) {
   currentView = view;
   if (view === 'dashboard') renderDashboard();
   if (view === 'log') renderLog();
+  if (view === 'add' && !document.getElementById('f-date').value) {
+    document.getElementById('f-date').value = todayISO();
+  }
 }
 
 document.getElementById('nav').addEventListener('click', e => {
@@ -634,19 +659,21 @@ document.getElementById('add-btn').addEventListener('click', () => {
   const k = parseFloat(document.getElementById('f-kwh').value);
   const c = parseFloat(document.getElementById('f-cost').value);
   const mi = parseFloat(document.getElementById('f-miles').value);
+  const dt = document.getElementById('f-date').value || todayISO();
 
   if (isNaN(m) || isNaN(k) || isNaN(c)) {
     showToast('Fill in all fields'); return;
   }
 
   const newId = sessions.length ? Math.max(...sessions.map(s => s.id)) + 1 : 1;
-  sessions.push({ id: newId, minutes: m, kwh: k, cost: c, miles: isNaN(mi) ? null : mi });
+  sessions.push({ id: newId, minutes: m, kwh: k, cost: c, miles: isNaN(mi) ? null : mi, date: dt });
   saveSessions(sessions);
 
   document.getElementById('f-minutes').value = '';
   document.getElementById('f-kwh').value = '';
   document.getElementById('f-cost').value = '';
   document.getElementById('f-miles').value = '';
+  document.getElementById('f-date').value = '';
 
   showToast('Session added ✓');
   switchView('log');
