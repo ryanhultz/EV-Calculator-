@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+  <!-- PWA / iOS home screen -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Lightning Log" />
+  <meta name="theme-color" content="#0a0e1a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+
+  <title>Lightning Log</title>
+
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%230a0e1a'/%3E%3Ctext x='90' y='125' font-size='100' text-anchor='middle'%3E%E2%9A%A1%3C/text%3E%3C/svg%3E" />
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+
+    :root {
+      --bg:       #0a0e1a;
+      --surface:  #111827;
+      --surface2: #0d1424;
+      --border:   #1e2d50;
+      --text:     #e8eaf0;
+      --muted:    #5a7ab0;
+      --dim:      #3a5080;
+      --cyan:     #00e5ff;
+      --teal:     #00c9a7;
+      --amber:    #f0b429;
+      --orange:   #f97316;
+      --blue:     #38bdf8;
+      --violet:   #a78bfa;
+      --red:      #ef4444;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bot: env(safe-area-inset-bottom, 0px);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', -apple-system, sans-serif;
+      overscroll-behavior: none;
+    }
+
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+      max-width: 430px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    /* ── Header ─────────────────────────────────────────── */
+    #header {
+      background: linear-gradient(135deg, #0d1629 0%, #1a2440 100%);
+      padding: calc(var(--safe-top) + 16px) 20px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .header-bolt { font-size: 30px; line-height: 1; flex-shrink: 0; }
+    .header-title { font-size: 21px; font-weight: 700; letter-spacing: -0.5px; }
+    .header-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .header-back {
+      background: none; border: none; color: var(--cyan); font-family: inherit;
+      font-size: 14px; font-weight: 700; cursor: pointer; padding: 4px 0;
+      display: flex; align-items: center; gap: 4px; flex-shrink: 0;
+    }
+    .print-timestamp { display: none; }
+
+    /* ── Body ───────────────────────────────────────────── */
+    #body {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 16px 16px 8px;
+    }
+
+    /* ── Nav ────────────────────────────────────────────── */
+    #nav {
+      display: flex;
+      background: #0d1424;
+      border-top: 1px solid var(--border);
+      padding-bottom: var(--safe-bot);
+      flex-shrink: 0;
+    }
+    .nav-btn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding: 10px 0 12px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--dim);
+      transition: color 0.15s;
+      font-family: inherit;
+    }
+    .nav-btn.active { color: var(--cyan); }
+    .nav-btn:disabled { opacity: 0.35; cursor: default; }
+    .nav-icon { font-size: 20px; line-height: 1; }
+    .nav-label { font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+
+    /* ── Shared ─────────────────────────────────────────── */
+    .section-head {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .section-head-action {
+      background: none; border: none; color: var(--cyan); font-family: inherit;
+      font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+      cursor: pointer; padding: 0;
+    }
+
+    /* ── Stats grid ─────────────────────────────────────── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 14px 14px 12px;
+      border-top: 3px solid var(--cyan);
+    }
+    .stat-val {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+    }
+    .stat-unit { font-size: 12px; font-weight: 400; margin-left: 3px; opacity: 0.65; }
+    .stat-label { font-size: 11px; color: var(--muted); margin-top: 4px; font-weight: 500; letter-spacing: 0.3px; }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px 14px;
+      margin-bottom: 16px;
+      font-size: 10px;
+      color: var(--muted);
+    }
+    .legend-item { display: flex; align-items: center; gap: 5px; }
+    .legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+    .footnote { text-align: center; font-size: 11px; color: var(--dim); padding-bottom: 4px; }
+
+    /* ── Trip cards (list view) ─────────────────────────── */
+    .trip-card {
+      background: var(--surface);
+      border-radius: 12px;
+      margin-bottom: 10px;
+      border: 1px solid var(--border);
+      padding: 14px;
+      cursor: pointer;
+      position: relative;
+    }
+    .trip-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .trip-name { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
+    .trip-date { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .trip-route { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+    .trip-route b { color: var(--text); font-weight: 600; }
+    .trip-mini-stats { display: flex; gap: 14px; margin-top: 10px; }
+    .trip-mini-stat { font-size: 12px; }
+    .trip-mini-val { font-weight: 700; font-size: 14px; }
+    .trip-mini-label { color: var(--dim); font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .trip-stop-count {
+      font-size: 10px; font-weight: 700; color: #0a0e1a; background: var(--cyan);
+      border-radius: 20px; padding: 3px 9px; flex-shrink: 0;
+    }
+
+    /* ── Stop cards (detail view) ───────────────────────── */
+    .stop-card {
+      background: var(--surface);
+      border-radius: 12px;
+      margin-bottom: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .stop-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 13px 14px;
+    }
+    .stop-badge {
+      font-size: 11px;
+      font-weight: 700;
+      color: #0a0e1a;
+      padding: 3px 8px;
+      border-radius: 20px;
+      min-width: 30px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .stop-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .stop-loc { font-size: 15px; font-weight: 700; letter-spacing: -0.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stop-sub { font-size: 12px; color: var(--amber); font-weight: 600; margin-top: 2px; }
+    .stop-meta { font-size: 11px; color: var(--muted); text-align: right; flex-shrink: 0; }
+    .chevron { font-size: 14px; color: var(--dim); margin-left: 4px; transition: transform 0.2s; display: inline-block; flex-shrink: 0; }
+    .chevron.open { transform: rotate(180deg); }
+
+    .stop-detail {
+      padding: 0 14px 14px;
+      border-top: 1px solid #1a2440;
+      display: none;
+    }
+    .stop-detail.open { display: block; }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+      margin-bottom: 12px;
+    }
+    .detail-item {
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 8px 6px;
+      text-align: center;
+    }
+    .detail-key { font-size: 9px; color: var(--dim); margin-bottom: 3px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+    .detail-val { font-size: 14px; font-weight: 700; color: var(--text); }
+    .delete-btn {
+      width: 100%;
+      padding: 10px;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 8px;
+      color: var(--red);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* Start marker card */
+    .start-card {
+      background: linear-gradient(135deg, #0d1629, #15203a);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .start-icon { font-size: 22px; }
+    .start-loc { font-size: 15px; font-weight: 700; }
+    .start-soc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .empty {
+      text-align: center;
+      color: var(--dim);
+      margin-top: 60px;
+      font-size: 15px;
+      line-height: 1.8;
+    }
+
+    /* ── Forms ──────────────────────────────────────────── */
+    .field-wrap { margin-bottom: 18px; }
+    .field-label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 7px;
+    }
+    .input-row { display: flex; align-items: stretch; }
+    .field-input, .field-text {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 17px;
+      padding: 13px 14px;
+      outline: none;
+      font-family: inherit;
+      -webkit-appearance: none;
+    }
+    .field-input { border-right: none; border-radius: 10px 0 0 10px; }
+    .field-text { border-radius: 10px; width: 100%; }
+    .field-input:focus, .field-text:focus { border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(0,229,255,0.15); }
+    .field-unit {
+      background: #1a2440;
+      border: 1px solid var(--border);
+      border-left: none;
+      border-radius: 0 10px 10px 0;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 13px 11px;
+      min-width: 40px;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .add-btn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #0070f3, #00c9a7);
+      border: none;
+      border-radius: 12px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: -0.3px;
+      margin-top: 8px;
+      -webkit-appearance: none;
+    }
+    .add-btn:active { opacity: 0.85; }
+    .hint-box {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 18px;
+      line-height: 1.5;
+    }
+    .hint-box b { color: var(--text); }
+
+    /* ── Home charge box ──────────────────────────────── */
+    .home-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+    .home-box-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .home-box-row .field-wrap { flex: 1; margin-bottom: 0; }
+    .home-result-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .home-result-item {
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 10px 6px;
+      text-align: center;
+    }
+    .home-result-val { font-size: 16px; font-weight: 700; }
+    .home-result-label { font-size: 9px; color: var(--dim); margin-top: 3px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+    .home-note { font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.5; }
+
+    /* ── Toast ──────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: calc(var(--safe-bot) + 80px);
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--teal);
+      color: #0a0e1a;
+      padding: 10px 22px;
+      border-radius: 30px;
+      font-size: 13px;
+      font-weight: 700;
+      z-index: 999;
+      box-shadow: 0 4px 20px rgba(0,201,167,0.4);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── Views ──────────────────────────────────────────── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+
+    /* ── Print styles ───────────────────────────────────── */
+    @media print {
+      body { background: #fff !important; color: #000 !important; }
+      #app { max-width: 100% !important; }
+      #nav, #toast, .delete-btn { display: none !important; }
+      #header { background: none !important; border-bottom: 2px solid #000 !important; padding: 10px 16px !important; }
+      .header-title { color: #000 !important; font-size: 18px !important; }
+      .header-sub { color: #444 !important; }
+      .header-bolt, .header-back { display: none; }
+      #body { padding: 12px 16px 0 !important; overflow: visible !important; }
+      .view { display: block !important; }
+      .stat-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 8px !important; margin-bottom: 14px !important; }
+      .stat-card { background: #f5f5f5 !important; border-radius: 6px !important; border-top-width: 2px !important; padding: 8px 10px !important; }
+      .stat-val { font-size: 16px !important; }
+      .stat-label { font-size: 10px !important; }
+      .legend, .footnote { display: none !important; }
+      .section-head { color: #000 !important; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-bottom: 8px !important; }
+      .section-head-action { display: none !important; }
+      .trip-card, .stop-card, .start-card { background: #fff !important; border: 1px solid #ccc !important; border-radius: 6px !important; margin-bottom: 6px !important; break-inside: avoid; }
+      .start-card { background: #f5f5f5 !important; }
+      .stop-row { padding: 8px 10px !important; }
+      .stop-loc { color: #000 !important; font-size: 14px !important; }
+      .stop-sub, .stop-meta, .trip-date, .trip-route, .start-soc { color: #555 !important; }
+      .chevron { display: none !important; }
+      .stop-detail { display: block !important; padding: 0 10px 8px !important; border-top: 1px solid #eee !important; }
+      .detail-item { background: #f5f5f5 !important; border-radius: 4px !important; padding: 5px !important; }
+      .detail-key { color: #555 !important; }
+      .detail-val { font-size: 12px !important; color: #000 !important; }
+      #view-trips, #view-add-stop, #view-new-trip { display: none !important; }
+      #home-charge-box, .section-head:has(+ #home-charge-box) { display: none !important; }
+      .print-timestamp { display: block !important; font-size: 10px; color: #888; text-align: right; margin-bottom: 8px; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Header -->
+  <div id="header">
+    <button class="header-back" id="header-back" style="display:none">‹ Trips</button>
+    <div class="header-bolt" id="header-bolt">⚡</div>
+    <div>
+      <div class="header-title" id="header-title">Lightning Log</div>
+      <div class="header-sub" id="header-sub">F-150 Lightning · Charging</div>
+    </div>
+  </div>
+  <div class="print-timestamp" id="print-timestamp"></div>
+
+  <!-- Body -->
+  <div id="body">
+
+    <!-- Trip List -->
+    <div id="view-trips" class="view active">
+      <div class="section-head">
+        <span>Trips</span>
+        <button class="section-head-action" id="new-trip-btn">+ New Trip</button>
+      </div>
+      <div id="trip-list"></div>
+    </div>
+
+    <!-- New Trip Form -->
+    <div id="view-new-trip" class="view">
+      <div class="section-head">Start a Trip</div>
+      <div class="field-wrap">
+        <label class="field-label">Trip Name</label>
+        <input class="field-text" type="text" placeholder="e.g. Ocean City Run" id="t-name" />
+      </div>
+      <div class="field-wrap">
+        <label class="field-label">Date</label>
+        <input class="field-text" type="date" id="t-date" />
+      </div>
+      <div class="field-wrap">
+        <label class="field-label">Starting Location</label>
+        <input class="field-text" type="text" placeholder="e.g. Home - Cayuga, NY" id="t-start-loc" />
+      </div>
+      <div class="field-wrap">
+        <label class="field-label">Starting Battery</label>
+        <div class="input-row">
+          <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 100" id="t-start-soc" />
+          <div class="field-unit">%</div>
+        </div>
+      </div>
+      <button class="add-btn" id="create-trip-btn">⚡ Start Trip</button>
+    </div>
+
+    <!-- Trip Detail (stops) -->
+    <div id="view-trip-detail" class="view">
+      <div class="section-head"><span>Summary</span></div>
+      <div class="stat-grid" id="trip-stat-grid"></div>
+      <div class="section-head">Route</div>
+      <div id="trip-route"></div>
+      <div class="footnote" id="trip-stop-count"></div>
+
+      <div class="section-head" style="margin-top:20px">Finish at Home</div>
+      <div id="home-charge-box"></div>
+    </div>
+
+    <!-- Add Stop Form -->
+    <div id="view-add-stop" class="view">
+      <div class="section-head">Add Charging Stop</div>
+      <div class="hint-box" id="prev-soc-hint"></div>
+      <div class="field-wrap">
+        <label class="field-label">Location</label>
+        <input class="field-text" type="text" placeholder="e.g. IONNA - Hagerstown, MD" id="s-loc" />
+      </div>
+      <div class="field-wrap">
+        <label class="field-label">Battery on Arrival</label>
+        <div class="input-row">
+          <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 22" id="s-batt-arrive" />
+          <div class="field-unit">%</div>
+        </div>
+      </div>
+      <div class="field-wrap">
+        <label class="field-label">Miles Since Last Stop</label>
+        <div class="input-row">
+          <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 120" id="s-miles" />
+          <div class="field-unit">mi</div>
+        </div>
+      </div>
+      <div class="field-wrap">
+        <label class="field-label">Time on Charger</label>
+        <div class="input-row">
+          <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 25" id="s-minutes" />
+          <div class="field-unit">min</div>
+        </div>
+      </div>
+      <div class="field-wrap">
+        <label class="field-label">kWh Delivered</label>
+        <div class="input-row">
+          <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 45.2" id="s-kwh" />
+          <div class="field-unit">kWh</div>
+        </div>
+      </div>
+      <div class="field-wrap">
+        <label class="field-label">Battery on Departure</label>
+        <div class="input-row">
+          <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 80" id="s-batt-depart" />
+          <div class="field-unit">%</div>
+        </div>
+      </div>
+      <div class="field-wrap">
+        <label class="field-label">Total Cost</label>
+        <div class="input-row">
+          <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 18.50" id="s-cost" />
+          <div class="field-unit">$</div>
+        </div>
+      </div>
+      <button class="add-btn" id="add-stop-btn">⚡ Add Stop</button>
+    </div>
+
+  </div>
+
+  <!-- Nav -->
+  <div id="nav">
+    <button class="nav-btn active" data-view="trips">
+      <span class="nav-icon">🗺</span>
+      <span class="nav-label">Trips</span>
+    </button>
+    <button class="nav-btn" data-view="add-stop" id="nav-add-stop" disabled>
+      <span class="nav-icon">＋</span>
+      <span class="nav-label">Add Stop</span>
+    </button>
+    <button class="nav-btn" id="print-nav-btn">
+      <span class="nav-icon">🖨</span>
+      <span class="nav-label">Print</span>
+    </button>
+  </div>
+
+  <div id="toast"></div>
+</div>
+
+<script>
+// ── Constants ───────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'lightning-log-trips';
+const MILES_PER_KWH = 2.4231;
+const BATTERY_CAPACITY_KWH = 98;
+
+// ── Default seed data (from original spreadsheet) ─────────────────────────────
+const DEFAULT_TRIPS = [
+  {
+    id: 1,
+    name: 'Ocean City Run',
+    date: '',
+    startLocation: 'Home - Cayuga, NY',
+    startSoc: 100,
+    stops: [
+      { id:1, location:'Stop 1', battArrive:null, miles:null, minutes:7,  kwh:20.9, battDepart:null, cost:8.12  },
+      { id:2, location:'Stop 2', battArrive:null, miles:null, minutes:23, kwh:41.7, battDepart:null, cost:16.22 },
+      { id:3, location:'Stop 3', battArrive:null, miles:null, minutes:27, kwh:54.8, battDepart:null, cost:23.05 },
+      { id:4, location:'Stop 4', battArrive:null, miles:null, minutes:20, kwh:41.5, battDepart:null, cost:17.01 },
+      { id:5, location:'Stop 5', battArrive:null, miles:null, minutes:29, kwh:49.5, battDepart:null, cost:20.81 },
+      { id:6, location:'Stop 6', battArrive:null, miles:null, minutes:20, kwh:35.4, battDepart:null, cost:14.52 },
+      { id:7, location:'Stop 7', battArrive:null, miles:null, minutes:34, kwh:55.1, battDepart:null, cost:21.46 },
+      { id:8, location:'Stop 8', battArrive:null, miles:null, minutes:0,  kwh:75,   battDepart:null, cost:15.0  },
+    ],
+  },
+];
+
+// ── Storage ────────────────────────────────────────────────────────────────────
+function loadTrips() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : DEFAULT_TRIPS;
+  } catch { return DEFAULT_TRIPS; }
+}
+function saveTrips() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(trips)); } catch {}
+}
+
+let trips = loadTrips();
+let currentTripId = trips.length ? trips[0].id : null;
+let expandedStopId = null;
+let currentView = 'trips';
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const f2 = n => n.toFixed(2);
+const f1 = n => n.toFixed(1);
+const f0 = n => Math.round(n).toString();
+const fc = n => '$' + n.toFixed(2);
+
+function speedColor(kw) {
+  if (kw >= 120) return '#00e5ff';
+  if (kw >= 80)  return '#00c9a7';
+  if (kw >= 50)  return '#f0b429';
+  return '#ff6b6b';
+}
+
+function getTrip(id) {
+  return trips.find(t => t.id === id) || null;
+}
+
+// Effective miles for a stop: actual if entered, else estimate from kWh
+function stopMiles(stop) {
+  return (stop.miles != null && !isNaN(stop.miles)) ? stop.miles : stop.kwh * MILES_PER_KWH;
+}
+
+// SOC departing the leg leading into this stop (= battDepart of previous stop,
+// or trip.startSoc if this is the first stop)
+function priorSoc(trip, index) {
+  if (index === 0) return trip.startSoc;
+  return trip.stops[index - 1].battDepart;
+}
+
+// Trip energy consumed driving INTO this stop, derived from battery % drop
+// (priorSoc -> this stop's battArrive) x pack capacity.
+function legEnergyKwh(trip, index) {
+  const stop = trip.stops[index];
+  const prevSoc = priorSoc(trip, index);
+  if (stop.battArrive == null || prevSoc == null) return null;
+  const drop = prevSoc - stop.battArrive;
+  if (drop <= 0) return null;
+  return (drop / 100) * BATTERY_CAPACITY_KWH;
+}
+
+function stopStats(trip, index) {
+  const stop = trip.stops[index];
+  const miles = stopMiles(stop);
+  const hasMiles = miles > 0;
+  const legKwh = legEnergyKwh(trip, index);
+  const useLegKwh = legKwh != null && legKwh > 0;
+  const efficiencyKwh = useLegKwh ? legKwh : stop.kwh;
+  return {
+    speed:       stop.minutes > 0 ? (stop.kwh / stop.minutes) * 60 : 0,
+    cpm:         stop.minutes > 0 ? stop.cost / stop.minutes : 0,
+    cpk:         stop.kwh > 0 ? stop.cost / stop.kwh : 0,
+    miPkwh:      hasMiles && efficiencyKwh > 0 ? miles / efficiencyKwh : null,
+    whPmi:       hasMiles ? (efficiencyKwh * 1000) / miles : null,
+    isEstMi:     stop.miles == null,
+    legKwh,
+    usedLegKwh:  useLegKwh,
+    miles,
+  };
+}
+
+function tripStats(trip) {
+  const totalMin   = trip.stops.reduce((a, s) => a + s.minutes, 0);
+  const totalKwh   = trip.stops.reduce((a, s) => a + s.kwh, 0);
+  const totalCost  = trip.stops.reduce((a, s) => a + s.cost, 0);
+  const totalMiles = trip.stops.reduce((a, s) => a + stopMiles(s), 0);
+
+  // Avg charging speed should reflect fast-charging stops only, excluding
+  // the home Level 2 top-off (which is much slower and would skew the average).
+  const fastStops = trip.stops.filter(s => !s.isHomeCharge);
+  const fastMin = fastStops.reduce((a, s) => a + s.minutes, 0);
+  const fastKwh = fastStops.reduce((a, s) => a + s.kwh, 0);
+
+  let totalEffKwh = 0;
+  let totalEffMiles = 0;
+  trip.stops.forEach((s, i) => {
+    const ss = stopStats(trip, i);
+    if (ss.miles > 0) {
+      totalEffKwh += ss.usedLegKwh ? ss.legKwh : s.kwh;
+      totalEffMiles += ss.miles;
+    }
+  });
+
+  return {
+    totalMin, totalKwh, totalCost, totalMiles,
+    avgSpeed:    fastMin    > 0 ? (fastKwh / fastMin) * 60 : 0,
+    costPerKwh:  totalKwh   > 0 ? totalCost / totalKwh : 0,
+    costPerMin:  totalMin   > 0 ? totalCost / totalMin : 0,
+    costPerMile: totalMiles > 0 ? totalCost / totalMiles : 0,
+    avgMiPkwh:   totalEffKwh   > 0 && totalEffMiles > 0 ? totalEffMiles / totalEffKwh : 0,
+    avgWhPmi:    totalEffMiles > 0 ? (totalEffKwh * 1000) / totalEffMiles : 0,
+  };
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ── Header ────────────────────────────────────────────────────────────────────
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function updateHeader() {
+  const back = document.getElementById('header-back');
+  const bolt = document.getElementById('header-bolt');
+  const title = document.getElementById('header-title');
+  const sub = document.getElementById('header-sub');
+
+  if (currentView === 'trips') {
+    back.style.display = 'none';
+    bolt.style.display = '';
+    title.textContent = 'Lightning Log';
+    sub.textContent = 'F-150 Lightning · Charging';
+  } else if (currentView === 'new-trip') {
+    back.style.display = '';
+    bolt.style.display = 'none';
+    title.textContent = 'New Trip';
+    sub.textContent = '';
+  } else {
+    const trip = getTrip(currentTripId);
+    back.style.display = '';
+    bolt.style.display = 'none';
+    title.textContent = trip ? trip.name : 'Trip';
+    sub.textContent = trip && trip.date ? formatDate(trip.date) : '';
+  }
+}
+
+// ── Nav / view switching ────────────────────────────────────────────────────────
+function switchView(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  currentView = view;
+  document.getElementById('view-' + view).classList.add('active');
+
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  if (view === 'trips' || view === 'trip-detail') document.querySelector('[data-view="trips"]').classList.add('active');
+  if (view === 'add-stop') document.querySelector('[data-view="add-stop"]').classList.add('active');
+
+  document.getElementById('nav-add-stop').disabled = !currentTripId || view === 'new-trip';
+
+  document.getElementById('body').scrollTop = 0;
+  updateHeader();
+
+  if (view === 'trips') renderTripList();
+  if (view === 'trip-detail') renderTripDetail();
+  if (view === 'add-stop') renderAddStop();
+}
+
+document.getElementById('nav').addEventListener('click', e => {
+  const btn = e.target.closest('[data-view]');
+  if (!btn || btn.disabled) return;
+  const v = btn.dataset.view;
+  if (v === 'trips') switchView('trips');
+  if (v === 'add-stop' && currentTripId) switchView('add-stop');
+});
+
+document.getElementById('header-back').addEventListener('click', () => {
+  switchView('trips');
+});
+
+// ── Render: Trip List ────────────────────────────────────────────────────────
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str == null ? '' : String(str);
+  return div.innerHTML;
+}
+
+function renderTripList() {
+  const list = document.getElementById('trip-list');
+  if (!trips.length) {
+    list.innerHTML = '<div class="empty">No trips yet.<br>Tap <b>+ New Trip</b> to start one.</div>';
+    return;
+  }
+
+  list.innerHTML = [...trips].slice().reverse().map(trip => {
+    const ts = tripStats(trip);
+    const lastStop = trip.stops.length ? trip.stops[trip.stops.length - 1].location : null;
+    return `
+      <div class="trip-card" data-trip="${trip.id}">
+        <div class="trip-card-top">
+          <div>
+            <div class="trip-name">${escapeHtml(trip.name || 'Untitled Trip')}</div>
+            <div class="trip-date">${trip.date ? formatDate(trip.date) : 'No date set'}</div>
+            <div class="trip-route">
+              <b>${escapeHtml(trip.startLocation || 'Start')}</b>${lastStop ? ` → <b>${escapeHtml(lastStop)}</b>` : ''}
+            </div>
+          </div>
+          <div class="trip-stop-count">${trip.stops.length} stop${trip.stops.length === 1 ? '' : 's'}</div>
+        </div>
+        <div class="trip-mini-stats">
+          <div class="trip-mini-stat"><div class="trip-mini-val" style="color:#f0b429">${fc(ts.totalCost)}</div><div class="trip-mini-label">Total Cost</div></div>
+          <div class="trip-mini-stat"><div class="trip-mini-val" style="color:#00e5ff">${f1(ts.totalKwh)}</div><div class="trip-mini-label">kWh</div></div>
+          <div class="trip-mini-stat"><div class="trip-mini-val" style="color:#f97316">${f0(ts.totalMiles)}</div><div class="trip-mini-label">Miles</div></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+document.getElementById('trip-list').addEventListener('click', e => {
+  const card = e.target.closest('[data-trip]');
+  if (!card) return;
+  currentTripId = parseInt(card.dataset.trip);
+  expandedStopId = null;
+  switchView('trip-detail');
+});
+
+// ── New Trip ─────────────────────────────────────────────────────────────────
+document.getElementById('new-trip-btn').addEventListener('click', () => {
+  document.getElementById('t-name').value = '';
+  document.getElementById('t-date').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('t-start-loc').value = '';
+  document.getElementById('t-start-soc').value = '100';
+  switchView('new-trip');
+});
+
+document.getElementById('create-trip-btn').addEventListener('click', () => {
+  const name = document.getElementById('t-name').value.trim();
+  const date = document.getElementById('t-date').value;
+  const startLoc = document.getElementById('t-start-loc').value.trim();
+  const startSoc = parseFloat(document.getElementById('t-start-soc').value);
+
+  if (!name) { showToast('Enter a trip name'); return; }
+
+  const newId = trips.length ? Math.max(...trips.map(t => t.id)) + 1 : 1;
+  const trip = {
+    id: newId,
+    name,
+    date,
+    startLocation: startLoc || 'Start',
+    startSoc: isNaN(startSoc) ? null : startSoc,
+    stops: [],
+  };
+  trips.push(trip);
+  saveTrips();
+  currentTripId = newId;
+  showToast('Trip created ✓');
+  switchView('trip-detail');
+});
+
+// ── Render: Trip Detail ──────────────────────────────────────────────────────
+function renderTripDetail() {
+  const trip = getTrip(currentTripId);
+  if (!trip) { switchView('trips'); return; }
+
+  const ts = tripStats(trip);
+  const cards = [
+    { label:'Total kWh',   value:f1(ts.totalKwh),    unit:'kWh',    color:'#00e5ff' },
+    { label:'Total Spent', value:fc(ts.totalCost),   unit:'',       color:'#f0b429' },
+    { label:'Avg Speed',   value:f1(ts.avgSpeed),    unit:'kW',     color:'#00c9a7' },
+    { label:'Cost / kWh',  value:fc(ts.costPerKwh),  unit:'',       color:'#a78bfa' },
+    { label:'Total Miles', value:f0(ts.totalMiles),  unit:'mi',     color:'#f97316' },
+    { label:'Cost / Mile', value:fc(ts.costPerMile), unit:'',       color:'#38bdf8' },
+    { label:'mi / kWh',    value:f2(ts.avgMiPkwh),   unit:'mi/kWh', color:'#00c9a7' },
+    { label:'Wh / Mile',   value:f0(ts.avgWhPmi),    unit:'Wh/mi',  color:'#a78bfa' },
+  ];
+
+  document.getElementById('trip-stat-grid').innerHTML = cards.map(c => `
+    <div class="stat-card" style="border-top-color:${c.color}">
+      <div class="stat-val" style="color:${c.color}">${c.value}<span class="stat-unit">${c.unit}</span></div>
+      <div class="stat-label">${c.label}</div>
+    </div>
+  `).join('');
+
+  const route = document.getElementById('trip-route');
+  let html = `
+    <div class="start-card">
+      <div class="start-icon">🏁</div>
+      <div>
+        <div class="start-loc">${escapeHtml(trip.startLocation || 'Start')}</div>
+        <div class="start-soc">${trip.startSoc != null ? f0(trip.startSoc) + '% battery' : 'Starting point'}</div>
+      </div>
+    </div>
+  `;
+
+  if (!trip.stops.length) {
+    html += '<div class="empty">No charging stops logged yet.<br>Tap <b>＋ Add Stop</b> below.</div>';
+  } else {
+    html += trip.stops.map((stop, i) => {
+      const ss = stopStats(trip, i);
+      const open = expandedStopId === stop.id;
+      return `
+        <div class="stop-card" data-stop="${stop.id}">
+          <div class="stop-row">
+            <div class="stop-badge" style="background:${stop.isHomeCharge ? '#a78bfa' : speedColor(ss.speed)}">${stop.isHomeCharge ? '🏠' : '#' + (i + 1)}</div>
+            <div class="stop-main">
+              <span class="stop-loc">${escapeHtml(stop.location || 'Stop ' + (i + 1))}</span>
+              <span class="stop-sub">${f1(stop.kwh)} kWh · ${fc(stop.cost)}</span>
+            </div>
+            <div class="stop-meta">${stop.minutes} min<br>${f0(ss.speed)} kW</div>
+            <span class="chevron ${open ? 'open' : ''}">▾</span>
+          </div>
+          <div class="stop-detail ${open ? 'open' : ''}">
+            <div class="detail-grid">
+              <div class="detail-item"><div class="detail-key">Miles</div><div class="detail-val">${stop.miles != null ? f0(stop.miles) : '~' + f0(stop.kwh * MILES_PER_KWH)}</div></div>
+              <div class="detail-item"><div class="detail-key">Time</div><div class="detail-val">${stop.minutes}m</div></div>
+              <div class="detail-item"><div class="detail-key">Energy</div><div class="detail-val">${f2(stop.kwh)}</div></div>
+              <div class="detail-item"><div class="detail-key">Cost</div><div class="detail-val">${fc(stop.cost)}</div></div>
+              <div class="detail-item"><div class="detail-key">Avg kW</div><div class="detail-val">${f1(ss.speed)}</div></div>
+              <div class="detail-item"><div class="detail-key">$/kWh</div><div class="detail-val">${fc(ss.cpk)}</div></div>
+              <div class="detail-item"><div class="detail-key">Battery</div><div class="detail-val">${stop.battArrive != null ? f0(stop.battArrive) + '%' : '—'} → ${stop.battDepart != null ? f0(stop.battDepart) + '%' : '—'}</div></div>
+              <div class="detail-item"><div class="detail-key">mi/kWh</div><div class="detail-val">${ss.miPkwh != null ? f2(ss.miPkwh) + (ss.isEstMi || !ss.usedLegKwh ? '~' : '') : '—'}</div></div>
+              <div class="detail-item"><div class="detail-key">Wh/mi</div><div class="detail-val">${ss.whPmi != null ? f0(ss.whPmi) + (ss.isEstMi || !ss.usedLegKwh ? '~' : '') : '—'}</div></div>
+            </div>
+            <button class="delete-btn" data-delete-stop="${stop.id}">Delete Stop</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  route.innerHTML = html;
+  document.getElementById('trip-stop-count').textContent = `${trip.stops.length} charging stop${trip.stops.length === 1 ? '' : 's'} logged`;
+
+  renderHomeCharge(trip);
+}
+
+// ── Home Charge Calculator ───────────────────────────────────────────────────
+function lastDepartSoc(trip) {
+  if (!trip.stops.length) return trip.startSoc;
+  for (let i = trip.stops.length - 1; i >= 0; i--) {
+    if (trip.stops[i].battDepart != null) return trip.stops[i].battDepart;
+  }
+  return trip.startSoc;
+}
+
+function renderHomeCharge(trip) {
+  const box = document.getElementById('home-charge-box');
+  const sectionHead = box.previousElementSibling;
+
+  // If a "Home" stop has already been added as the final stop, hide this box.
+  const lastStop = trip.stops.length ? trip.stops[trip.stops.length - 1] : null;
+  if (lastStop && lastStop.isHomeCharge) {
+    box.innerHTML = '';
+    if (sectionHead) sectionHead.style.display = 'none';
+    return;
+  }
+  if (sectionHead) sectionHead.style.display = '';
+
+  const home = trip.homeCharge || {};
+  const lastSoc = lastDepartSoc(trip);
+
+  let resultsHtml = '';
+  const milesHome = home.miles;
+  const rate = home.rate;
+  const chargerKw = home.chargerKw;
+  let preview = null;
+
+  if (lastSoc != null && milesHome != null && !isNaN(milesHome)) {
+    const ts = tripStats(trip);
+    const effMiPkwh = ts.avgMiPkwh > 0 ? ts.avgMiPkwh : MILES_PER_KWH;
+    const kwhUsedDriving = milesHome / effMiPkwh;
+    const socUsedDriving = (kwhUsedDriving / BATTERY_CAPACITY_KWH) * 100;
+    const arrivalSoc = Math.max(0, lastSoc - socUsedDriving);
+    const socNeeded = Math.max(0, 100 - arrivalSoc);
+    const kwhNeeded = (socNeeded / 100) * BATTERY_CAPACITY_KWH;
+    const cost = (rate != null && !isNaN(rate)) ? kwhNeeded * rate : 0;
+    const timeHrs = (chargerKw != null && !isNaN(chargerKw) && chargerKw > 0) ? kwhNeeded / chargerKw : null;
+    const minutes = timeHrs != null ? Math.round(timeHrs * 60) : 0;
+
+    preview = { arrivalSoc, kwhNeeded, cost, minutes, milesHome, effMiPkwh, lastSoc, hasCost: rate != null && !isNaN(rate) };
+
+    resultsHtml = `
+      <div class="home-result-grid">
+        <div class="home-result-item"><div class="home-result-val" style="color:#f0b429">${f0(arrivalSoc)}%</div><div class="home-result-label">Arrive Home</div></div>
+        <div class="home-result-item"><div class="home-result-val" style="color:#00e5ff">${f1(kwhNeeded)}</div><div class="home-result-label">kWh to 100%</div></div>
+        <div class="home-result-item"><div class="home-result-val" style="color:#a78bfa">${preview.hasCost ? fc(cost) : '—'}</div><div class="home-result-label">Est. Cost</div></div>
+      </div>
+      ${timeHrs != null ? `<div class="home-note">≈ ${timeHrs < 1 ? f0(timeHrs * 60) + ' min' : f1(timeHrs) + ' hrs'} on a ${f1(chargerKw)} kW Level 2 charger.</div>` : ''}
+      <div class="home-note">Based on ${f0(lastSoc)}% departing last stop, ${f1(effMiPkwh)} mi/kWh trip efficiency, and ${f0(milesHome)} mi to home.</div>
+      <button class="add-btn" id="add-home-stop-btn" style="margin-top:10px">＋ Add as Final Stop</button>
+    `;
+  }
+
+  box.innerHTML = `
+    <div class="home-box">
+      <div class="home-box-row">
+        <div class="field-wrap">
+          <label class="field-label">Miles to Home</label>
+          <div class="input-row">
+            <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 45" id="home-miles" value="${milesHome != null ? milesHome : ''}" />
+            <div class="field-unit">mi</div>
+          </div>
+        </div>
+      </div>
+      <div class="home-box-row">
+        <div class="field-wrap">
+          <label class="field-label">Home Rate</label>
+          <div class="input-row">
+            <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 0.12" id="home-rate" value="${rate != null ? rate : ''}" />
+            <div class="field-unit">$/kWh</div>
+          </div>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">L2 Charger</label>
+          <div class="input-row">
+            <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 11.5" id="home-charger-kw" value="${chargerKw != null ? chargerKw : ''}" />
+            <div class="field-unit">kW</div>
+          </div>
+        </div>
+      </div>
+      <button class="add-btn" id="calc-home-btn">Calculate Home Charge</button>
+      ${resultsHtml}
+    </div>
+  `;
+
+  document.getElementById('calc-home-btn').addEventListener('click', () => {
+    const m = parseFloat(document.getElementById('home-miles').value);
+    const r = parseFloat(document.getElementById('home-rate').value);
+    const ck = parseFloat(document.getElementById('home-charger-kw').value);
+
+    if (isNaN(m)) { showToast('Enter miles to home'); return; }
+    if (lastDepartSoc(trip) == null) { showToast('No departure battery % logged yet'); return; }
+
+    trip.homeCharge = {
+      miles: m,
+      rate: isNaN(r) ? null : r,
+      chargerKw: isNaN(ck) ? null : ck,
+    };
+    saveTrips();
+    renderHomeCharge(trip);
+  });
+
+  const addBtn = document.getElementById('add-home-stop-btn');
+  if (addBtn && preview) {
+    addBtn.addEventListener('click', () => {
+      const newId = trip.stops.length ? Math.max(...trip.stops.map(s => s.id)) + 1 : 1;
+      trip.stops.push({
+        id: newId,
+        location: 'Home',
+        battArrive: preview.arrivalSoc,
+        miles: preview.milesHome,
+        minutes: preview.minutes,
+        kwh: preview.kwhNeeded,
+        battDepart: 100,
+        cost: preview.cost,
+        isHomeCharge: true,
+      });
+      saveTrips();
+      showToast('Home charge added ✓');
+      renderTripDetail();
+    });
+  }
+}
+
+document.getElementById('trip-route').addEventListener('click', e => {
+  const del = e.target.closest('[data-delete-stop]');
+  if (del) {
+    const id = parseInt(del.dataset.deleteStop);
+    const trip = getTrip(currentTripId);
+    trip.stops = trip.stops.filter(s => s.id !== id);
+    saveTrips();
+    expandedStopId = null;
+    renderTripDetail();
+    showToast('Stop deleted');
+    return;
+  }
+  const card = e.target.closest('[data-stop]');
+  if (card) {
+    const id = parseInt(card.dataset.stop);
+    expandedStopId = expandedStopId === id ? null : id;
+    renderTripDetail();
+  }
+});
+
+// ── Render: Add Stop ─────────────────────────────────────────────────────────
+function renderAddStop() {
+  const trip = getTrip(currentTripId);
+  if (!trip) { switchView('trips'); return; }
+
+  const index = trip.stops.length;
+  const prevSoc = priorSoc(trip, index);
+  const prevLoc = index === 0 ? trip.startLocation : trip.stops[index - 1].location;
+
+  const hint = document.getElementById('prev-soc-hint');
+  if (prevSoc != null) {
+    hint.innerHTML = `Departing <b>${escapeHtml(prevLoc || 'previous stop')}</b> at <b>${f0(prevSoc)}%</b> battery. Enter the battery % on arrival here to calculate trip efficiency for this leg.`;
+  } else {
+    hint.innerHTML = `Departing <b>${escapeHtml(prevLoc || 'previous stop')}</b>. Enter battery % values to enable efficiency calculations.`;
+  }
+
+  ['s-loc','s-batt-arrive','s-miles','s-minutes','s-kwh','s-batt-depart','s-cost'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+}
+
+document.getElementById('add-stop-btn').addEventListener('click', () => {
+  const trip = getTrip(currentTripId);
+  if (!trip) return;
+
+  const loc = document.getElementById('s-loc').value.trim();
+  const battArrive = parseFloat(document.getElementById('s-batt-arrive').value);
+  const miles = parseFloat(document.getElementById('s-miles').value);
+  const minutes = parseFloat(document.getElementById('s-minutes').value);
+  const kwh = parseFloat(document.getElementById('s-kwh').value);
+  const battDepart = parseFloat(document.getElementById('s-batt-depart').value);
+  const cost = parseFloat(document.getElementById('s-cost').value);
+
+  if (isNaN(minutes) || isNaN(kwh) || isNaN(cost)) {
+    showToast('Fill in time, kWh, and cost'); return;
+  }
+
+  const newId = trip.stops.length ? Math.max(...trip.stops.map(s => s.id)) + 1 : 1;
+  trip.stops.push({
+    id: newId,
+    location: loc || `Stop ${trip.stops.length + 1}`,
+    battArrive: isNaN(battArrive) ? null : battArrive,
+    miles: isNaN(miles) ? null : miles,
+    minutes, kwh,
+    battDepart: isNaN(battDepart) ? null : battDepart,
+    cost,
+  });
+  saveTrips();
+  showToast('Stop added ✓');
+  switchView('trip-detail');
+});
+
+// ── Print ────────────────────────────────────────────────────────────────────
+document.getElementById('print-nav-btn').addEventListener('click', () => {
+  if (!currentTripId) { showToast('Open a trip to print'); return; }
+
+  document.getElementById('print-timestamp').textContent =
+    'Printed ' + new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  const finish = () => {
+    document.querySelectorAll('.stop-detail').forEach(el => { el.classList.add('open'); el.style.display = 'block'; });
+    window.print();
+    setTimeout(() => {
+      document.querySelectorAll('.stop-detail').forEach(el => { el.style.display = ''; });
+      renderTripDetail();
+    }, 300);
+  };
+
+  if (currentView !== 'trip-detail') {
+    expandedStopId = null;
+    switchView('trip-detail');
+    setTimeout(finish, 50);
+  } else {
+    finish();
+  }
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+switchView('trips');
+</script>
+</body>
+</html>
