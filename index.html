@@ -87,29 +87,39 @@
     /* ── Nav ────────────────────────────────────────────── */
     #nav {
       display: flex;
+      gap: 8px;
       background: #0d1424;
       border-top: 1px solid var(--border);
-      padding-bottom: var(--safe-bot);
+      padding: 10px 12px;
+      padding-bottom: calc(10px + var(--safe-bot));
       flex-shrink: 0;
     }
     .nav-btn {
       flex: 1;
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
       align-items: center;
-      gap: 3px;
-      padding: 10px 0 12px;
-      background: none;
-      border: none;
+      justify-content: center;
+      gap: 6px;
+      padding: 11px 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
       cursor: pointer;
-      color: var(--dim);
-      transition: color 0.15s;
+      color: var(--muted);
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
       font-family: inherit;
     }
-    .nav-btn.active { color: var(--cyan); }
-    .nav-btn:disabled { opacity: 0.35; cursor: default; }
-    .nav-icon { font-size: 20px; line-height: 1; }
-    .nav-label { font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+    .nav-btn:active { transform: scale(0.97); }
+    .nav-btn.active {
+      background: var(--cyan);
+      color: #0a0e1a;
+      border-color: var(--cyan);
+      opacity: 1;
+    }
+    .nav-btn:disabled:not(.active) { opacity: 0.4; cursor: default; }
+    .nav-icon { font-size: 16px; line-height: 1; }
+    .nav-label { font-size: 11px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; white-space: nowrap; }
 
     /* ── Shared ─────────────────────────────────────────── */
     .section-head {
@@ -303,6 +313,24 @@
     .field-input { border-right: none; border-radius: 10px 0 0 10px; }
     .field-text { border-radius: 10px; width: 100%; }
     .field-input:focus, .field-text:focus { border-color: var(--cyan); box-shadow: 0 0 0 2px rgba(0,229,255,0.15); }
+    .loc-row { display: flex; gap: 8px; align-items: stretch; }
+    .loc-btn {
+      flex-shrink: 0;
+      width: 52px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 20px;
+      cursor: pointer;
+      color: var(--cyan);
+      transition: background 0.15s;
+      -webkit-appearance: none;
+    }
+    .loc-btn:active { background: #1a2440; }
+    .loc-btn:disabled { opacity: 0.5; cursor: default; }
+    .loc-status { font-size: 11px; color: var(--muted); margin-top: 6px; min-height: 14px; }
+    .loc-status.error { color: var(--amber); }
+
     .field-unit {
       background: #1a2440;
       border: 1px solid var(--border);
@@ -376,6 +404,38 @@
     .home-result-label { font-size: 9px; color: var(--dim); margin-top: 3px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
     .home-note { font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.5; }
 
+
+    /* ── Leg type toggle ─────────────────────────────────── */
+    .leg-toggle {
+      display: flex;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 18px;
+    }
+    .leg-toggle-btn {
+      flex: 1;
+      padding: 10px 4px;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+      line-height: 1.3;
+    }
+    .leg-toggle-btn.active {
+      background: var(--cyan);
+      color: #0a0e1a;
+    }
+    .leg-toggle-btn:not(:last-child) {
+      border-right: 1px solid var(--border);
+    }
+
     /* ── Toast ──────────────────────────────────────────── */
     #toast {
       position: fixed;
@@ -405,35 +465,53 @@
 
     /* ── Print styles ───────────────────────────────────── */
     @media print {
-      body { background: #fff !important; color: #000 !important; }
-      #app { max-width: 100% !important; }
+      @page { size: letter portrait; margin: 0.4in; }
+      html, body { width: 100%; height: auto !important; background: #fff !important; }
+      body { background: #fff !important; color: #000 !important; font-size: 10px !important; }
+      #app, #body, .view { background: #fff !important; }
+      #app { max-width: 100% !important; height: auto !important; min-height: 0 !important; display: block !important; }
       #nav, #toast, .delete-btn { display: none !important; }
-      #header { background: none !important; border-bottom: 2px solid #000 !important; padding: 10px 16px !important; }
-      .header-title { color: #000 !important; font-size: 18px !important; }
-      .header-sub { color: #444 !important; }
+      #header { background: none !important; border-bottom: 1.5px solid #000 !important; padding: 0 0 6px !important; }
+      .header-title { color: #000 !important; font-size: 15px !important; }
+      .header-sub { color: #444 !important; font-size: 9px !important; }
       .header-bolt, .header-back { display: none; }
-      #body { padding: 12px 16px 0 !important; overflow: visible !important; }
+      #body { padding: 6px 0 0 !important; overflow: visible !important; height: auto !important; }
       .view { display: block !important; }
-      .stat-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 8px !important; margin-bottom: 14px !important; }
-      .stat-card { background: #f5f5f5 !important; border-radius: 6px !important; border-top-width: 2px !important; padding: 8px 10px !important; }
-      .stat-val { font-size: 16px !important; }
-      .stat-label { font-size: 10px !important; }
+
+      /* Summary: single compact row of 8 */
+      .stat-grid { grid-template-columns: repeat(8, 1fr) !important; gap: 4px !important; margin-bottom: 8px !important; }
+      .stat-card { background: #f5f5f5 !important; border-radius: 4px !important; border-top-width: 2px !important; padding: 4px 3px !important; }
+      .stat-val { font-size: 11px !important; }
+      .stat-unit { font-size: 7px !important; }
+      .stat-label { font-size: 7px !important; margin-top: 1px !important; }
+
       .legend, .footnote { display: none !important; }
-      .section-head { color: #000 !important; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-bottom: 8px !important; }
+      .section-head { color: #000 !important; border-bottom: 1px solid #ccc; padding-bottom: 2px; margin: 0 0 5px !important; font-size: 9px !important; }
       .section-head-action { display: none !important; }
-      .trip-card, .stop-card, .start-card { background: #fff !important; border: 1px solid #ccc !important; border-radius: 6px !important; margin-bottom: 6px !important; break-inside: avoid; }
-      .start-card { background: #f5f5f5 !important; }
-      .stop-row { padding: 8px 10px !important; }
-      .stop-loc { color: #000 !important; font-size: 14px !important; }
-      .stop-sub, .stop-meta, .trip-date, .trip-route, .start-soc { color: #555 !important; }
+
+      /* Route: two columns of stop cards to save vertical space */
+      #trip-route { columns: 2; column-gap: 8px; }
+      .trip-card, .stop-card, .start-card {
+        background: #fff !important; border: 1px solid #ccc !important; border-radius: 4px !important;
+        margin: 0 0 5px !important; break-inside: avoid; -webkit-column-break-inside: avoid;
+      }
+      .start-card { background: #f5f5f5 !important; padding: 6px 8px !important; }
+      .start-icon { font-size: 14px !important; }
+      .start-loc { font-size: 11px !important; }
+      .stop-row { padding: 5px 7px !important; gap: 6px !important; }
+      .stop-badge { padding: 2px 5px !important; min-width: 20px !important; font-size: 9px !important; }
+      .stop-loc { color: #000 !important; font-size: 11px !important; }
+      .stop-sub, .stop-meta, .trip-date, .trip-route, .start-soc { color: #555 !important; font-size: 9px !important; }
+      .stop-sub { font-size: 9px !important; }
       .chevron { display: none !important; }
-      .stop-detail { display: block !important; padding: 0 10px 8px !important; border-top: 1px solid #eee !important; }
-      .detail-item { background: #f5f5f5 !important; border-radius: 4px !important; padding: 5px !important; }
-      .detail-key { color: #555 !important; }
-      .detail-val { font-size: 12px !important; color: #000 !important; }
+      .stop-detail { display: block !important; padding: 0 7px 6px !important; border-top: 1px solid #eee !important; }
+      .detail-grid { gap: 3px !important; margin: 6px 0 !important; }
+      .detail-item { background: #f5f5f5 !important; border-radius: 3px !important; padding: 3px 2px !important; }
+      .detail-key { color: #555 !important; font-size: 7px !important; margin-bottom: 1px !important; }
+      .detail-val { font-size: 9px !important; color: #000 !important; }
+
       #view-trips, #view-add-stop, #view-new-trip { display: none !important; }
-      #home-charge-box, .section-head:has(+ #home-charge-box) { display: none !important; }
-      .print-timestamp { display: block !important; font-size: 10px; color: #888; text-align: right; margin-bottom: 8px; }
+      .print-timestamp { display: block !important; font-size: 8px; color: #888; text-align: right; margin-bottom: 4px; }
     }
   </style>
 </head>
@@ -458,7 +536,6 @@
     <div id="view-trips" class="view active">
       <div class="section-head">
         <span>Trips</span>
-        <button class="section-head-action" id="new-trip-btn">+ New Trip</button>
       </div>
       <div id="trip-list"></div>
     </div>
@@ -495,62 +572,99 @@
       <div class="section-head">Route</div>
       <div id="trip-route"></div>
       <div class="footnote" id="trip-stop-count"></div>
-
-      <div class="section-head" style="margin-top:20px">Finish at Home</div>
-      <div id="home-charge-box"></div>
     </div>
 
     <!-- Add Stop Form -->
     <div id="view-add-stop" class="view">
       <div class="section-head">Add Charging Stop</div>
+      <div class="leg-toggle" id="leg-toggle">
+        <button class="leg-toggle-btn" data-leg="first">🏁 First<br>Stop</button>
+        <button class="leg-toggle-btn active" data-leg="enroute">⚡ En<br>Route</button>
+        <button class="leg-toggle-btn" data-leg="home">🏠 Home<br>Charge</button>
+      </div>
       <div class="hint-box" id="prev-soc-hint"></div>
-      <div class="field-wrap">
-        <label class="field-label">Location</label>
-        <input class="field-text" type="text" placeholder="e.g. IONNA - Hagerstown, MD" id="s-loc" />
-      </div>
-      <div class="field-wrap">
-        <label class="field-label">Battery on Arrival</label>
-        <div class="input-row">
-          <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 22" id="s-batt-arrive" />
-          <div class="field-unit">%</div>
+
+      <!-- Standard charging-stop fields -->
+      <div id="standard-fields">
+        <div class="field-wrap">
+          <label class="field-label">Location</label>
+          <div class="loc-row">
+            <input class="field-text" type="text" placeholder="e.g. IONNA - Hagerstown, MD" id="s-loc" />
+            <button type="button" class="loc-btn" id="loc-btn" title="Use my location">📍</button>
+          </div>
+          <div class="loc-status" id="loc-status"></div>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Battery on Arrival</label>
+          <div class="input-row">
+            <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 22" id="s-batt-arrive" />
+            <div class="field-unit">%</div>
+          </div>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label" id="s-miles-field-label">Miles Since Last Stop</label>
+          <div class="input-row">
+            <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 120" id="s-miles" />
+            <div class="field-unit">mi</div>
+          </div>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Time on Charger</label>
+          <div class="input-row">
+            <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 25" id="s-minutes" />
+            <div class="field-unit">min</div>
+          </div>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">kWh Delivered</label>
+          <div class="input-row">
+            <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 45.2" id="s-kwh" />
+            <div class="field-unit">kWh</div>
+          </div>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Battery on Departure</label>
+          <div class="input-row">
+            <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 80" id="s-batt-depart" />
+            <div class="field-unit">%</div>
+          </div>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Total Cost</label>
+          <div class="input-row">
+            <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 18.50" id="s-cost" />
+            <div class="field-unit">$</div>
+          </div>
         </div>
       </div>
-      <div class="field-wrap">
-        <label class="field-label">Miles Since Last Stop</label>
-        <div class="input-row">
-          <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 120" id="s-miles" />
-          <div class="field-unit">mi</div>
+
+      <!-- Home-charge fields (shown only in Home Charge mode) -->
+      <div id="home-fields" style="display:none">
+        <div class="field-wrap">
+          <label class="field-label">Miles to Home</label>
+          <div class="input-row">
+            <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 45" id="h-miles" />
+            <div class="field-unit">mi</div>
+          </div>
         </div>
-      </div>
-      <div class="field-wrap">
-        <label class="field-label">Time on Charger</label>
-        <div class="input-row">
-          <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 25" id="s-minutes" />
-          <div class="field-unit">min</div>
+        <div class="field-wrap">
+          <label class="field-label">Home Rate <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+          <div class="input-row">
+            <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 0.12" id="h-rate" />
+            <div class="field-unit">$/kWh</div>
+          </div>
         </div>
-      </div>
-      <div class="field-wrap">
-        <label class="field-label">kWh Delivered</label>
-        <div class="input-row">
-          <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 45.2" id="s-kwh" />
-          <div class="field-unit">kWh</div>
+        <div class="field-wrap">
+          <label class="field-label">L2 Charger <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+          <div class="input-row">
+            <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 11.5" id="h-charger-kw" />
+            <div class="field-unit">kW</div>
+          </div>
         </div>
+        <div id="home-preview"></div>
       </div>
-      <div class="field-wrap">
-        <label class="field-label">Battery on Departure</label>
-        <div class="input-row">
-          <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 80" id="s-batt-depart" />
-          <div class="field-unit">%</div>
-        </div>
-      </div>
-      <div class="field-wrap">
-        <label class="field-label">Total Cost</label>
-        <div class="input-row">
-          <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 18.50" id="s-cost" />
-          <div class="field-unit">$</div>
-        </div>
-      </div>
-      <button class="add-btn" id="add-stop-btn">⚡ Add Stop</button>
+
+      <button class="add-btn" id="add-stop-btn">⚡ Add Charging Stop</button>
     </div>
 
   </div>
@@ -561,9 +675,9 @@
       <span class="nav-icon">🗺</span>
       <span class="nav-label">Trips</span>
     </button>
-    <button class="nav-btn" data-view="add-stop" id="nav-add-stop" disabled>
-      <span class="nav-icon">＋</span>
-      <span class="nav-label">Add Stop</span>
+    <button class="nav-btn" data-view="primary" id="nav-primary">
+      <span class="nav-icon" id="nav-primary-icon">＋</span>
+      <span class="nav-label" id="nav-primary-label">New Trip</span>
     </button>
     <button class="nav-btn" id="print-nav-btn">
       <span class="nav-icon">🖨</span>
@@ -577,6 +691,7 @@
 <script>
 // ── Constants ───────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'lightning-log-trips';
+const SCHEMA_VERSION = 2;
 const MILES_PER_KWH = 2.4231;
 const BATTERY_CAPACITY_KWH = 98;
 
@@ -601,15 +716,58 @@ const DEFAULT_TRIPS = [
   },
 ];
 
-// ── Storage ────────────────────────────────────────────────────────────────────
+// ── Storage (versioned + migrated) ────────────────────────────────────────────
+// Stored shape: { version: N, trips: [...] }. Older/legacy payloads (a bare
+// array) are detected and upgraded so schema changes never corrupt saved data.
+function normalizeStop(s, i) {
+  return {
+    id: s.id != null ? s.id : i + 1,
+    location: s.location != null ? s.location : `Stop ${i + 1}`,
+    battArrive: s.battArrive != null && !isNaN(s.battArrive) ? s.battArrive : null,
+    miles: s.miles != null && !isNaN(s.miles) ? s.miles : null,
+    minutes: Number(s.minutes) || 0,
+    kwh: Number(s.kwh) || 0,
+    battDepart: s.battDepart != null && !isNaN(s.battDepart) ? s.battDepart : null,
+    cost: Number(s.cost) || 0,
+    isHomeCharge: !!s.isHomeCharge,
+    isLastLeg: !!s.isLastLeg,
+  };
+}
+
+function normalizeTrip(t, i) {
+  return {
+    id: t.id != null ? t.id : i + 1,
+    name: t.name || 'Untitled Trip',
+    date: t.date || '',
+    startLocation: t.startLocation || 'Start',
+    startSoc: t.startSoc != null && !isNaN(t.startSoc) ? t.startSoc : null,
+    stops: Array.isArray(t.stops) ? t.stops.map(normalizeStop) : [],
+    homeCharge: t.homeCharge || null,
+  };
+}
+
+function migrate(payload) {
+  // Bare array = pre-versioning format → wrap it
+  let raw = Array.isArray(payload) ? { version: 1, trips: payload } : payload;
+  if (!raw || !Array.isArray(raw.trips)) return DEFAULT_TRIPS.map(normalizeTrip);
+  // (future migrations would branch on raw.version here)
+  return raw.trips.map(normalizeTrip);
+}
+
 function loadTrips() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : DEFAULT_TRIPS;
-  } catch { return DEFAULT_TRIPS; }
+    if (!raw) return DEFAULT_TRIPS.map(normalizeTrip);
+    return migrate(JSON.parse(raw));
+  } catch {
+    return DEFAULT_TRIPS.map(normalizeTrip);
+  }
 }
+
 function saveTrips() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(trips)); } catch {}
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: SCHEMA_VERSION, trips }));
+  } catch {}
 }
 
 let trips = loadTrips();
@@ -632,6 +790,12 @@ function speedColor(kw) {
 
 function getTrip(id) {
   return trips.find(t => t.id === id) || null;
+}
+
+// Clamp a parsed value to a range; returns null if not a finite number.
+function clampPct(v) {
+  if (v == null || isNaN(v)) return null;
+  return Math.min(100, Math.max(0, v));
 }
 
 // Effective miles for a stop: actual if entered, else estimate from kWh
@@ -761,9 +925,23 @@ function switchView(view) {
 
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   if (view === 'trips' || view === 'trip-detail') document.querySelector('[data-view="trips"]').classList.add('active');
-  if (view === 'add-stop') document.querySelector('[data-view="add-stop"]').classList.add('active');
+  if (view === 'add-stop' || view === 'new-trip') document.getElementById('nav-primary').classList.add('active');
 
-  document.getElementById('nav-add-stop').disabled = !currentTripId || view === 'new-trip';
+  // Context-aware primary button. On the trips list (and the New Trip form) it
+  // represents "New Trip"; inside a trip (or the Add Stop form) it's "Add Stop".
+  const primaryLabel = document.getElementById('nav-primary-label');
+  const primaryIcon = document.getElementById('nav-primary-icon');
+  const primaryBtn = document.getElementById('nav-primary');
+  const tripContext = view === 'trips' || view === 'new-trip';
+  if (tripContext) {
+    primaryLabel.textContent = 'New Trip';
+    primaryIcon.textContent = '＋';
+    primaryBtn.disabled = false;
+  } else {
+    primaryLabel.textContent = 'Add Stop';
+    primaryIcon.textContent = '⚡';
+    primaryBtn.disabled = !currentTripId;
+  }
 
   document.getElementById('body').scrollTop = 0;
   updateHeader();
@@ -777,8 +955,13 @@ document.getElementById('nav').addEventListener('click', e => {
   const btn = e.target.closest('[data-view]');
   if (!btn || btn.disabled) return;
   const v = btn.dataset.view;
-  if (v === 'trips') switchView('trips');
-  if (v === 'add-stop' && currentTripId) switchView('add-stop');
+  if (v === 'trips') { switchView('trips'); return; }
+  if (v === 'primary') {
+    // In a trip context the primary action is "New Trip"; inside a trip it adds a stop.
+    const tripContext = currentView === 'trips' || currentView === 'new-trip';
+    if (tripContext) openNewTrip();
+    else if (currentTripId) switchView('add-stop');
+  }
 });
 
 document.getElementById('header-back').addEventListener('click', () => {
@@ -833,13 +1016,13 @@ document.getElementById('trip-list').addEventListener('click', e => {
 });
 
 // ── New Trip ─────────────────────────────────────────────────────────────────
-document.getElementById('new-trip-btn').addEventListener('click', () => {
+function openNewTrip() {
   document.getElementById('t-name').value = '';
   document.getElementById('t-date').value = new Date().toISOString().slice(0, 10);
   document.getElementById('t-start-loc').value = '';
   document.getElementById('t-start-soc').value = '100';
   switchView('new-trip');
-});
+}
 
 document.getElementById('create-trip-btn').addEventListener('click', () => {
   const name = document.getElementById('t-name').value.trim();
@@ -855,8 +1038,9 @@ document.getElementById('create-trip-btn').addEventListener('click', () => {
     name,
     date,
     startLocation: startLoc || 'Start',
-    startSoc: isNaN(startSoc) ? null : startSoc,
+    startSoc: clampPct(startSoc),
     stops: [],
+    homeCharge: null,
   };
   trips.push(trip);
   saveTrips();
@@ -938,11 +1122,9 @@ function renderTripDetail() {
 
   route.innerHTML = html;
   document.getElementById('trip-stop-count').textContent = `${trip.stops.length} charging stop${trip.stops.length === 1 ? '' : 's'} logged`;
-
-  renderHomeCharge(trip);
 }
 
-// ── Home Charge Calculator ───────────────────────────────────────────────────
+// ── Home Charge ──────────────────────────────────────────────────────────────
 function lastDepartSoc(trip) {
   if (!trip.stops.length) return trip.startSoc;
   for (let i = trip.stops.length - 1; i >= 0; i--) {
@@ -951,124 +1133,55 @@ function lastDepartSoc(trip) {
   return trip.startSoc;
 }
 
-function renderHomeCharge(trip) {
-  const box = document.getElementById('home-charge-box');
-  const sectionHead = box.previousElementSibling;
-
-  // If a "Home" stop has already been added as the final stop, hide this box.
-  const lastStop = trip.stops.length ? trip.stops[trip.stops.length - 1] : null;
-  if (lastStop && lastStop.isHomeCharge) {
-    box.innerHTML = '';
-    if (sectionHead) sectionHead.style.display = 'none';
-    return;
-  }
-  if (sectionHead) sectionHead.style.display = '';
-
-  const home = trip.homeCharge || {};
+// Pure calculation: returns home-charge figures, or null if inputs incomplete.
+// Pure calculation from explicit inputs; returns figures or null if incomplete.
+function computeHomeCharge(trip, milesHome, rate, chargerKw) {
   const lastSoc = lastDepartSoc(trip);
+  if (lastSoc == null || milesHome == null || isNaN(milesHome)) return null;
 
-  let resultsHtml = '';
-  const milesHome = home.miles;
-  const rate = home.rate;
-  const chargerKw = home.chargerKw;
-  let preview = null;
+  const ts = tripStats(trip);
+  const effMiPkwh = ts.avgMiPkwh > 0 ? ts.avgMiPkwh : MILES_PER_KWH;
+  const kwhUsedDriving = milesHome / effMiPkwh;
+  const socUsedDriving = (kwhUsedDriving / BATTERY_CAPACITY_KWH) * 100;
+  const arrivalSoc = Math.max(0, lastSoc - socUsedDriving);
+  const socNeeded = Math.max(0, 100 - arrivalSoc);
+  const kwhNeeded = (socNeeded / 100) * BATTERY_CAPACITY_KWH;
+  const hasCost = rate != null && !isNaN(rate);
+  const cost = hasCost ? kwhNeeded * rate : 0;
+  const timeHrs = (chargerKw != null && !isNaN(chargerKw) && chargerKw > 0) ? kwhNeeded / chargerKw : null;
+  const minutes = timeHrs != null ? Math.round(timeHrs * 60) : 0;
 
-  if (lastSoc != null && milesHome != null && !isNaN(milesHome)) {
-    const ts = tripStats(trip);
-    const effMiPkwh = ts.avgMiPkwh > 0 ? ts.avgMiPkwh : MILES_PER_KWH;
-    const kwhUsedDriving = milesHome / effMiPkwh;
-    const socUsedDriving = (kwhUsedDriving / BATTERY_CAPACITY_KWH) * 100;
-    const arrivalSoc = Math.max(0, lastSoc - socUsedDriving);
-    const socNeeded = Math.max(0, 100 - arrivalSoc);
-    const kwhNeeded = (socNeeded / 100) * BATTERY_CAPACITY_KWH;
-    const cost = (rate != null && !isNaN(rate)) ? kwhNeeded * rate : 0;
-    const timeHrs = (chargerKw != null && !isNaN(chargerKw) && chargerKw > 0) ? kwhNeeded / chargerKw : null;
-    const minutes = timeHrs != null ? Math.round(timeHrs * 60) : 0;
+  return { arrivalSoc, kwhNeeded, cost, minutes, milesHome, effMiPkwh, lastSoc, hasCost, timeHrs, chargerKw };
+}
 
-    preview = { arrivalSoc, kwhNeeded, cost, minutes, milesHome, effMiPkwh, lastSoc, hasCost: rate != null && !isNaN(rate) };
+// Live preview shown inside the Add Charging Stop form when in Home Charge mode.
+function renderHomePreview() {
+  const trip = getTrip(currentTripId);
+  const box = document.getElementById('home-preview');
+  if (!trip) { box.innerHTML = ''; return; }
 
-    resultsHtml = `
-      <div class="home-result-grid">
-        <div class="home-result-item"><div class="home-result-val" style="color:#f0b429">${f0(arrivalSoc)}%</div><div class="home-result-label">Arrive Home</div></div>
-        <div class="home-result-item"><div class="home-result-val" style="color:#00e5ff">${f1(kwhNeeded)}</div><div class="home-result-label">kWh to 100%</div></div>
-        <div class="home-result-item"><div class="home-result-val" style="color:#a78bfa">${preview.hasCost ? fc(cost) : '—'}</div><div class="home-result-label">Est. Cost</div></div>
-      </div>
-      ${timeHrs != null ? `<div class="home-note">≈ ${timeHrs < 1 ? f0(timeHrs * 60) + ' min' : f1(timeHrs) + ' hrs'} on a ${f1(chargerKw)} kW Level 2 charger.</div>` : ''}
-      <div class="home-note">Based on ${f0(lastSoc)}% departing last stop, ${f1(effMiPkwh)} mi/kWh trip efficiency, and ${f0(milesHome)} mi to home.</div>
-      <button class="add-btn" id="add-home-stop-btn" style="margin-top:10px">＋ Add as Final Stop</button>
-    `;
-  }
+  const m = parseFloat(document.getElementById('h-miles').value);
+  const r = parseFloat(document.getElementById('h-rate').value);
+  const ck = parseFloat(document.getElementById('h-charger-kw').value);
+  const p = computeHomeCharge(trip, isNaN(m) ? null : m, isNaN(r) ? null : r, isNaN(ck) ? null : ck);
+
+  if (!p) { box.innerHTML = ''; return; }
 
   box.innerHTML = `
-    <div class="home-box">
-      <div class="home-box-row">
-        <div class="field-wrap">
-          <label class="field-label">Miles to Home</label>
-          <div class="input-row">
-            <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 45" id="home-miles" value="${milesHome != null ? milesHome : ''}" />
-            <div class="field-unit">mi</div>
-          </div>
-        </div>
-      </div>
-      <div class="home-box-row">
-        <div class="field-wrap">
-          <label class="field-label">Home Rate</label>
-          <div class="input-row">
-            <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 0.12" id="home-rate" value="${rate != null ? rate : ''}" />
-            <div class="field-unit">$/kWh</div>
-          </div>
-        </div>
-        <div class="field-wrap">
-          <label class="field-label">L2 Charger</label>
-          <div class="input-row">
-            <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 11.5" id="home-charger-kw" value="${chargerKw != null ? chargerKw : ''}" />
-            <div class="field-unit">kW</div>
-          </div>
-        </div>
-      </div>
-      <button class="add-btn" id="calc-home-btn">Calculate Home Charge</button>
-      ${resultsHtml}
+    <div class="home-result-grid">
+      <div class="home-result-item"><div class="home-result-val" style="color:#f0b429">${f0(p.arrivalSoc)}%</div><div class="home-result-label">Arrive Home</div></div>
+      <div class="home-result-item"><div class="home-result-val" style="color:#00e5ff">${f1(p.kwhNeeded)}</div><div class="home-result-label">kWh to 100%</div></div>
+      <div class="home-result-item"><div class="home-result-val" style="color:#a78bfa">${p.hasCost ? fc(p.cost) : '—'}</div><div class="home-result-label">Est. Cost</div></div>
     </div>
+    ${p.timeHrs != null ? `<div class="home-note">≈ ${p.timeHrs < 1 ? f0(p.timeHrs * 60) + ' min' : f1(p.timeHrs) + ' hrs'} on a ${f1(p.chargerKw)} kW Level 2 charger.</div>` : ''}
+    <div class="home-note">Based on ${f0(p.lastSoc)}% departing last stop, ${f1(p.effMiPkwh)} mi/kWh trip efficiency, and ${f0(p.milesHome)} mi to home.</div>
   `;
-
-  document.getElementById('calc-home-btn').addEventListener('click', () => {
-    const m = parseFloat(document.getElementById('home-miles').value);
-    const r = parseFloat(document.getElementById('home-rate').value);
-    const ck = parseFloat(document.getElementById('home-charger-kw').value);
-
-    if (isNaN(m)) { showToast('Enter miles to home'); return; }
-    if (lastDepartSoc(trip) == null) { showToast('No departure battery % logged yet'); return; }
-
-    trip.homeCharge = {
-      miles: m,
-      rate: isNaN(r) ? null : r,
-      chargerKw: isNaN(ck) ? null : ck,
-    };
-    saveTrips();
-    renderHomeCharge(trip);
-  });
-
-  const addBtn = document.getElementById('add-home-stop-btn');
-  if (addBtn && preview) {
-    addBtn.addEventListener('click', () => {
-      const newId = trip.stops.length ? Math.max(...trip.stops.map(s => s.id)) + 1 : 1;
-      trip.stops.push({
-        id: newId,
-        location: 'Home',
-        battArrive: preview.arrivalSoc,
-        miles: preview.milesHome,
-        minutes: preview.minutes,
-        kwh: preview.kwhNeeded,
-        battDepart: 100,
-        cost: preview.cost,
-        isHomeCharge: true,
-      });
-      saveTrips();
-      showToast('Home charge added ✓');
-      renderTripDetail();
-    });
-  }
 }
+
+// Recompute the live preview as home-charge inputs change
+['h-miles','h-rate','h-charger-kw'].forEach(id => {
+  document.getElementById(id).addEventListener('input', renderHomePreview);
+});
 
 document.getElementById('trip-route').addEventListener('click', e => {
   const del = e.target.closest('[data-delete-stop]');
@@ -1091,30 +1204,167 @@ document.getElementById('trip-route').addEventListener('click', e => {
 });
 
 // ── Render: Add Stop ─────────────────────────────────────────────────────────
+let legType = 'enroute'; // 'first' | 'enroute' | 'home'
+
+document.getElementById('leg-toggle').addEventListener('click', e => {
+  const btn = e.target.closest('[data-leg]');
+  if (!btn) return;
+  legType = btn.dataset.leg;
+  document.querySelectorAll('.leg-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.leg === legType));
+  applyLegMode();
+});
+
+// Show the right field group + button label + hint for the current mode
+function applyLegMode() {
+  const isHome = legType === 'home';
+  document.getElementById('standard-fields').style.display = isHome ? 'none' : '';
+  document.getElementById('home-fields').style.display = isHome ? '' : 'none';
+  document.getElementById('add-stop-btn').textContent = isHome ? '🏠 Add Home Charge' : '⚡ Add Charging Stop';
+  updateAddStopHint();
+  if (isHome) renderHomePreview();
+}
+
+function updateAddStopHint() {
+  const trip = getTrip(currentTripId);
+  if (!trip) return;
+  const index = trip.stops.length;
+  const prevSoc = priorSoc(trip, index);
+  const prevLoc = index === 0 ? trip.startLocation : trip.stops[index - 1].location;
+  const hint = document.getElementById('prev-soc-hint');
+
+  const milesFieldLabel = document.getElementById('s-miles-field-label');
+  if (milesFieldLabel) {
+    milesFieldLabel.textContent = legType === 'first' ? 'Miles from Start' : 'Miles Since Last Stop';
+  }
+
+  if (legType === 'home') {
+    const lastSoc = lastDepartSoc(trip);
+    const lastLoc = trip.stops.length ? trip.stops[trip.stops.length - 1].location : trip.startLocation;
+    if (lastSoc != null) {
+      hint.innerHTML = `Final leg home from <b>${escapeHtml(lastLoc || 'last stop')}</b> at <b>${f0(lastSoc)}%</b>. Enter miles to home and we'll calculate the Level 2 charge back to 100%.`;
+    } else {
+      hint.innerHTML = `Final leg home. Log a departure battery % at a prior stop first so we can estimate the home charge.`;
+    }
+  } else if (legType === 'first') {
+    hint.innerHTML = `First charging stop departing <b>${escapeHtml(trip.startLocation || 'start')}</b>${prevSoc != null ? ` at <b>${f0(prevSoc)}%</b>` : ''}. Enter battery % on arrival here to calculate efficiency for this leg.`;
+  } else {
+    if (prevSoc != null) {
+      hint.innerHTML = `Departing <b>${escapeHtml(prevLoc || 'previous stop')}</b> at <b>${f0(prevSoc)}%</b> battery. Enter battery % on arrival here to calculate efficiency for this leg.`;
+    } else {
+      hint.innerHTML = `Departing <b>${escapeHtml(prevLoc || 'previous stop')}</b>. Enter battery % values to enable efficiency calculations.`;
+    }
+  }
+}
+
 function renderAddStop() {
   const trip = getTrip(currentTripId);
   if (!trip) { switchView('trips'); return; }
 
-  const index = trip.stops.length;
-  const prevSoc = priorSoc(trip, index);
-  const prevLoc = index === 0 ? trip.startLocation : trip.stops[index - 1].location;
+  // Auto-select leg type based on stop count (default to first/enroute, never home)
+  legType = trip.stops.length === 0 ? 'first' : 'enroute';
+  document.querySelectorAll('.leg-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.leg === legType));
 
-  const hint = document.getElementById('prev-soc-hint');
-  if (prevSoc != null) {
-    hint.innerHTML = `Departing <b>${escapeHtml(prevLoc || 'previous stop')}</b> at <b>${f0(prevSoc)}%</b> battery. Enter the battery % on arrival here to calculate trip efficiency for this leg.`;
-  } else {
-    hint.innerHTML = `Departing <b>${escapeHtml(prevLoc || 'previous stop')}</b>. Enter battery % values to enable efficiency calculations.`;
-  }
-
-  ['s-loc','s-batt-arrive','s-miles','s-minutes','s-kwh','s-batt-depart','s-cost'].forEach(id => {
+  ['s-loc','s-batt-arrive','s-miles','s-minutes','s-kwh','s-batt-depart','s-cost',
+   'h-miles','h-rate','h-charger-kw'].forEach(id => {
     document.getElementById(id).value = '';
   });
+  document.getElementById('home-preview').innerHTML = '';
+  document.getElementById('loc-status').textContent = '';
+  document.getElementById('loc-status').classList.remove('error');
+
+  applyLegMode();
 }
+
+// ── Use-my-location (GPS + Nominatim reverse geocode) ─────────────────────────
+function setLocStatus(msg, isError) {
+  const el = document.getElementById('loc-status');
+  el.textContent = msg || '';
+  el.classList.toggle('error', !!isError);
+}
+
+// Build a concise label from a Nominatim address object
+function labelFromAddress(addr) {
+  if (!addr) return null;
+  const name = addr.amenity || addr.shop || addr.fuel || addr.building || '';
+  const town = addr.city || addr.town || addr.village || addr.hamlet || addr.county || '';
+  const state = addr.state_code || addr.state || '';
+  const place = [town, state].filter(Boolean).join(', ');
+  if (name && place) return `${name} - ${place}`;
+  if (place) return place;
+  if (name) return name;
+  return null;
+}
+
+document.getElementById('loc-btn').addEventListener('click', () => {
+  const btn = document.getElementById('loc-btn');
+  if (!navigator.geolocation) { setLocStatus('Geolocation not supported on this device', true); return; }
+
+  btn.disabled = true;
+  setLocStatus('Getting your location…');
+
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const { latitude, longitude } = pos.coords;
+    const coords = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+
+    // Try reverse geocoding (needs internet). Fall back to raw coordinates.
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=16&addressdetails=1`;
+      const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if (!resp.ok) throw new Error('lookup failed');
+      const data = await resp.json();
+      const label = labelFromAddress(data.address) || data.display_name?.split(',').slice(0, 2).join(',') || coords;
+      document.getElementById('s-loc').value = label;
+      setLocStatus('Location filled in — edit if needed');
+    } catch {
+      document.getElementById('s-loc').value = coords;
+      setLocStatus('Offline — used GPS coordinates, edit to add a name', true);
+    } finally {
+      btn.disabled = false;
+    }
+  }, (err) => {
+    btn.disabled = false;
+    if (err.code === err.PERMISSION_DENIED) setLocStatus('Location permission denied', true);
+    else if (err.code === err.TIMEOUT) setLocStatus('Location request timed out', true);
+    else setLocStatus('Could not get location', true);
+  }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
+});
 
 document.getElementById('add-stop-btn').addEventListener('click', () => {
   const trip = getTrip(currentTripId);
   if (!trip) return;
 
+  // ── Home Charge mode ──
+  if (legType === 'home') {
+    const m = parseFloat(document.getElementById('h-miles').value);
+    const r = parseFloat(document.getElementById('h-rate').value);
+    const ck = parseFloat(document.getElementById('h-charger-kw').value);
+
+    if (isNaN(m)) { showToast('Enter miles to home'); return; }
+    if (lastDepartSoc(trip) == null) { showToast('No departure battery % logged yet'); return; }
+
+    const p = computeHomeCharge(trip, m, isNaN(r) ? null : r, isNaN(ck) ? null : ck);
+    if (!p) { showToast('Could not calculate home charge'); return; }
+
+    const newId = trip.stops.length ? Math.max(...trip.stops.map(s => s.id)) + 1 : 1;
+    trip.stops.push({
+      id: newId,
+      location: 'Home',
+      battArrive: p.arrivalSoc,
+      miles: p.milesHome,
+      minutes: p.minutes,
+      kwh: p.kwhNeeded,
+      battDepart: 100,
+      cost: p.cost,
+      isHomeCharge: true,
+      isLastLeg: true,
+    });
+    saveTrips();
+    showToast('Home charge added ✓');
+    switchView('trip-detail');
+    return;
+  }
+
+  // ── Standard charging stop ──
   const loc = document.getElementById('s-loc').value.trim();
   const battArrive = parseFloat(document.getElementById('s-batt-arrive').value);
   const miles = parseFloat(document.getElementById('s-miles').value);
@@ -1127,15 +1377,23 @@ document.getElementById('add-stop-btn').addEventListener('click', () => {
     showToast('Fill in time, kWh, and cost'); return;
   }
 
+  const battArriveC = clampPct(battArrive);
+  const battDepartC = clampPct(battDepart);
+  if (battArriveC != null && battDepartC != null && battDepartC < battArriveC) {
+    showToast('Departure % should be ≥ arrival %'); return;
+  }
+
   const newId = trip.stops.length ? Math.max(...trip.stops.map(s => s.id)) + 1 : 1;
   trip.stops.push({
     id: newId,
     location: loc || `Stop ${trip.stops.length + 1}`,
-    battArrive: isNaN(battArrive) ? null : battArrive,
+    battArrive: battArriveC,
     miles: isNaN(miles) ? null : miles,
     minutes, kwh,
-    battDepart: isNaN(battDepart) ? null : battDepart,
+    battDepart: battDepartC,
     cost,
+    isHomeCharge: false,
+    isLastLeg: false,
   });
   saveTrips();
   showToast('Stop added ✓');
