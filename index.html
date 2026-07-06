@@ -173,6 +173,7 @@
     .legend-item { display: flex; align-items: center; gap: 5px; }
     .legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
     .footnote { text-align: center; font-size: 11px; color: var(--dim); padding-bottom: 4px; }
+    .rev-tag { text-align: center; font-size: 9px; color: var(--dim); opacity: 0.5; letter-spacing: 0.5px; margin-top: 24px; padding-bottom: 8px; }
 
     /* ── Trip cards (list view) ─────────────────────────── */
     .trip-card {
@@ -263,6 +264,19 @@
       font-weight: 600;
       cursor: pointer;
     }
+    .stop-actions { display: flex; gap: 8px; }
+    .stop-actions .delete-btn, .stop-actions .edit-btn { flex: 1; }
+    .edit-btn {
+      padding: 10px;
+      background: rgba(0,229,255,0.1);
+      border: 1px solid rgba(0,229,255,0.3);
+      border-radius: 8px;
+      color: var(--cyan);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
 
     /* Start marker card */
     .start-card {
@@ -276,6 +290,30 @@
       gap: 12px;
     }
     .start-icon { font-size: 22px; }
+    /* Solid green flag: hide the checkered emoji glyph, draw a flag shape via CSS */
+    .green-flag {
+      display: inline-block;
+      width: 0; height: 0;
+      color: transparent;
+      position: relative;
+      vertical-align: middle;
+      margin-right: 14px;
+    }
+    .green-flag::before {
+      content: "";
+      position: absolute;
+      left: 0; top: -8px;
+      width: 13px; height: 10px;
+      background: #22c55e;
+      border-radius: 1px;
+    }
+    .green-flag::after {
+      content: "";
+      position: absolute;
+      left: 0; top: -8px;
+      width: 1.5px; height: 17px;
+      background: #166534;
+    }
     .start-loc { font-size: 15px; font-weight: 700; }
     .start-soc { font-size: 12px; color: var(--muted); margin-top: 2px; }
 
@@ -436,6 +474,70 @@
       border-right: 1px solid var(--border);
     }
 
+    /* ── AC/DC toggle ────────────────────────────────────── */
+    .ac-dc-toggle {
+      display: flex;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .ac-dc-btn {
+      flex: 1;
+      padding: 12px 4px;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+    }
+    .ac-dc-btn.active[data-power="dc"] { background: var(--cyan); color: #0a0e1a; }
+    .ac-dc-btn.active[data-power="ac"] { background: var(--teal); color: #0a0e1a; }
+    .ac-dc-btn:not(:last-child) { border-right: 1px solid var(--border); }
+
+    /* Small AC/DC badge shown on stop cards */
+    .power-badge {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      padding: 1px 5px;
+      border-radius: 4px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .power-badge.dc { background: rgba(0,229,255,0.18); color: var(--cyan); }
+    .power-badge.ac { background: rgba(0,201,167,0.18); color: var(--teal); }
+
+    /* ── DC/AC/Combined summary tabs ─────────────────────── */
+    .power-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+    .power-tab {
+      flex: 1;
+      padding: 8px 4px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .power-tab.active { background: var(--cyan); color: #0a0e1a; border-color: var(--cyan); }
+    .power-tab[data-filter="ac"].active { background: var(--teal); border-color: var(--teal); }
+    .stat-empty { text-align: center; color: var(--dim); font-size: 13px; padding: 24px 0; line-height: 1.6; }
+
     /* ── Toast ──────────────────────────────────────────── */
     #toast {
       position: fixed;
@@ -514,6 +616,8 @@
       .print-timestamp { display: block !important; font-size: 8px; color: #888; text-align: right; margin-bottom: 4px; }
     }
   </style>
+  <!-- jsPDF (for share-as-PDF). Loaded from CDN; share falls back to print if unavailable. -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 <div id="app">
@@ -538,6 +642,7 @@
         <span>Trips</span>
       </div>
       <div id="trip-list"></div>
+      <div class="rev-tag" id="rev-tag"></div>
     </div>
 
     <!-- New Trip Form -->
@@ -568,6 +673,11 @@
     <!-- Trip Detail (stops) -->
     <div id="view-trip-detail" class="view">
       <div class="section-head"><span>Summary</span></div>
+      <div class="power-tabs" id="power-tabs">
+        <button class="power-tab active" data-filter="combined">Combined</button>
+        <button class="power-tab" data-filter="dc">DC</button>
+        <button class="power-tab" data-filter="ac">AC</button>
+      </div>
       <div class="stat-grid" id="trip-stat-grid"></div>
       <div class="section-head">Route</div>
       <div id="trip-route"></div>
@@ -578,9 +688,9 @@
     <div id="view-add-stop" class="view">
       <div class="section-head">Add Charging Stop</div>
       <div class="leg-toggle" id="leg-toggle">
-        <button class="leg-toggle-btn" data-leg="first">🏁 First<br>Stop</button>
+        <button class="leg-toggle-btn" data-leg="first"><span class="green-flag">🏁</span> First<br>Charge</button>
         <button class="leg-toggle-btn active" data-leg="enroute">⚡ En<br>Route</button>
-        <button class="leg-toggle-btn" data-leg="home">🏠 Home<br>Charge</button>
+        <button class="leg-toggle-btn" data-leg="home">🏁 Dest.<br>Charge</button>
       </div>
       <div class="hint-box" id="prev-soc-hint"></div>
 
@@ -593,6 +703,13 @@
             <button type="button" class="loc-btn" id="loc-btn" title="Use my location">📍</button>
           </div>
           <div class="loc-status" id="loc-status"></div>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Charger Type</label>
+          <div class="ac-dc-toggle" id="ac-dc-toggle">
+            <button type="button" class="ac-dc-btn active" data-power="dc">⚡ DC Fast</button>
+            <button type="button" class="ac-dc-btn" data-power="ac">🔌 AC Level 2</button>
+          </div>
         </div>
         <div class="field-wrap">
           <label class="field-label">Battery on Arrival</label>
@@ -641,7 +758,21 @@
       <!-- Home-charge fields (shown only in Home Charge mode) -->
       <div id="home-fields" style="display:none">
         <div class="field-wrap">
-          <label class="field-label">Miles to Home</label>
+          <label class="field-label">Battery at Start</label>
+          <div class="input-row">
+            <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 23" id="h-batt-start" />
+            <div class="field-unit">%</div>
+          </div>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Charge to (Target)</label>
+          <div class="input-row">
+            <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 80" id="h-batt-target" />
+            <div class="field-unit">%</div>
+          </div>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label">Miles to Destination <span style="color:var(--dim);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
           <div class="input-row">
             <input class="field-input" type="number" inputmode="decimal" placeholder="e.g. 45" id="h-miles" />
             <div class="field-unit">mi</div>
@@ -680,8 +811,8 @@
       <span class="nav-label" id="nav-primary-label">New Trip</span>
     </button>
     <button class="nav-btn" id="print-nav-btn">
-      <span class="nav-icon">🖨</span>
-      <span class="nav-label">Print</span>
+      <span class="nav-icon">📤</span>
+      <span class="nav-label">Share</span>
     </button>
   </div>
 
@@ -692,6 +823,7 @@
 // ── Constants ───────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'lightning-log-trips';
 const SCHEMA_VERSION = 2;
+const APP_REVISION = 'rev 19';
 const MILES_PER_KWH = 2.4231;
 const BATTERY_CAPACITY_KWH = 98;
 
@@ -731,6 +863,10 @@ function normalizeStop(s, i) {
     cost: Number(s.cost) || 0,
     isHomeCharge: !!s.isHomeCharge,
     isLastLeg: !!s.isLastLeg,
+    // AC vs DC. Legacy stops default: destination charge = AC (Level 2), road = DC.
+    power: (s.power === 'ac' || s.power === 'dc') ? s.power : (s.isHomeCharge ? 'ac' : 'dc'),
+    homeRate: s.homeRate != null && !isNaN(s.homeRate) ? s.homeRate : null,
+    chargerKw: s.chargerKw != null && !isNaN(s.chargerKw) ? s.chargerKw : null,
   };
 }
 
@@ -841,21 +977,28 @@ function stopStats(trip, index) {
   };
 }
 
-function tripStats(trip) {
-  const totalMin   = trip.stops.reduce((a, s) => a + s.minutes, 0);
-  const totalKwh   = trip.stops.reduce((a, s) => a + s.kwh, 0);
-  const totalCost  = trip.stops.reduce((a, s) => a + s.cost, 0);
-  const totalMiles = trip.stops.reduce((a, s) => a + stopMiles(s), 0);
+// Compute a full stat set. `filter` can be 'dc', 'ac', or null (combined).
+// Efficiency (mi/kWh, Wh/mi) always uses full-trip leg context, but is scoped
+// to the stops in the current filter.
+function tripStats(trip, filter) {
+  const inSet = (s) => !filter || s.power === filter;
+  const stops = trip.stops.filter(inSet);
 
-  // Avg charging speed should reflect fast-charging stops only, excluding
-  // the home Level 2 top-off (which is much slower and would skew the average).
-  const fastStops = trip.stops.filter(s => !s.isHomeCharge);
+  const totalMin   = stops.reduce((a, s) => a + s.minutes, 0);
+  const totalKwh   = stops.reduce((a, s) => a + s.kwh, 0);
+  // Destination charge COST is excluded from spend totals; its kWh/miles count.
+  const totalCost  = stops.reduce((a, s) => a + (s.isHomeCharge ? 0 : s.cost), 0);
+  const totalMiles = stops.reduce((a, s) => a + stopMiles(s), 0);
+
+  // Avg charging speed excludes the destination Level 2 top-off (slow rate skews it).
+  const fastStops = stops.filter(s => !s.isHomeCharge);
   const fastMin = fastStops.reduce((a, s) => a + s.minutes, 0);
   const fastKwh = fastStops.reduce((a, s) => a + s.kwh, 0);
 
   let totalEffKwh = 0;
   let totalEffMiles = 0;
   trip.stops.forEach((s, i) => {
+    if (!inSet(s)) return;
     const ss = stopStats(trip, i);
     if (ss.miles > 0) {
       totalEffKwh += ss.usedLegKwh ? ss.legKwh : s.kwh;
@@ -864,6 +1007,7 @@ function tripStats(trip) {
   });
 
   return {
+    stopCount:   stops.length,
     totalMin, totalKwh, totalCost, totalMiles,
     avgSpeed:    fastMin    > 0 ? (fastKwh / fastMin) * 60 : 0,
     costPerKwh:  totalKwh   > 0 ? totalCost / totalKwh : 0,
@@ -919,6 +1063,9 @@ function updateHeader() {
 
 // ── Nav / view switching ────────────────────────────────────────────────────────
 function switchView(view) {
+  // Leaving the add/edit form without saving cancels any in-progress edit
+  if (view !== 'add-stop' && currentView === 'add-stop') editingStopId = null;
+
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   currentView = view;
   document.getElementById('view-' + view).classList.add('active');
@@ -960,7 +1107,7 @@ document.getElementById('nav').addEventListener('click', e => {
     // In a trip context the primary action is "New Trip"; inside a trip it adds a stop.
     const tripContext = currentView === 'trips' || currentView === 'new-trip';
     if (tripContext) openNewTrip();
-    else if (currentTripId) switchView('add-stop');
+    else if (currentTripId) { editingStopId = null; switchView('add-stop'); }
   }
 });
 
@@ -1012,6 +1159,7 @@ document.getElementById('trip-list').addEventListener('click', e => {
   if (!card) return;
   currentTripId = parseInt(card.dataset.trip);
   expandedStopId = null;
+  powerFilter = 'combined';
   switchView('trip-detail');
 });
 
@@ -1050,11 +1198,18 @@ document.getElementById('create-trip-btn').addEventListener('click', () => {
 });
 
 // ── Render: Trip Detail ──────────────────────────────────────────────────────
+let powerFilter = 'combined'; // 'combined' | 'dc' | 'ac'
+
 function renderTripDetail() {
   const trip = getTrip(currentTripId);
   if (!trip) { switchView('trips'); return; }
 
-  const ts = tripStats(trip);
+  const filterArg = powerFilter === 'combined' ? null : powerFilter;
+  const ts = tripStats(trip, filterArg);
+
+  // Reflect active tab
+  document.querySelectorAll('.power-tab').forEach(b => b.classList.toggle('active', b.dataset.filter === powerFilter));
+
   const cards = [
     { label:'Total kWh',   value:f1(ts.totalKwh),    unit:'kWh',    color:'#00e5ff' },
     { label:'Total Spent', value:fc(ts.totalCost),   unit:'',       color:'#f0b429' },
@@ -1066,17 +1221,22 @@ function renderTripDetail() {
     { label:'Wh / Mile',   value:f0(ts.avgWhPmi),    unit:'Wh/mi',  color:'#a78bfa' },
   ];
 
-  document.getElementById('trip-stat-grid').innerHTML = cards.map(c => `
+  const grid = document.getElementById('trip-stat-grid');
+  if (ts.stopCount === 0) {
+    grid.innerHTML = `<div class="stat-empty">No ${powerFilter.toUpperCase()} charging stops logged for this trip.</div>`;
+  } else {
+    grid.innerHTML = cards.map(c => `
     <div class="stat-card" style="border-top-color:${c.color}">
       <div class="stat-val" style="color:${c.color}">${c.value}<span class="stat-unit">${c.unit}</span></div>
       <div class="stat-label">${c.label}</div>
     </div>
   `).join('');
+  }
 
   const route = document.getElementById('trip-route');
   let html = `
     <div class="start-card">
-      <div class="start-icon">🏁</div>
+      <div class="start-icon"><span class="green-flag">🏁</span></div>
       <div>
         <div class="start-loc">${escapeHtml(trip.startLocation || 'Start')}</div>
         <div class="start-soc">${trip.startSoc != null ? f0(trip.startSoc) + '% battery' : 'Starting point'}</div>
@@ -1093,9 +1253,9 @@ function renderTripDetail() {
       return `
         <div class="stop-card" data-stop="${stop.id}">
           <div class="stop-row">
-            <div class="stop-badge" style="background:${stop.isHomeCharge ? '#a78bfa' : speedColor(ss.speed)}">${stop.isHomeCharge ? '🏠' : '#' + (i + 1)}</div>
+            <div class="stop-badge" style="background:${stop.isHomeCharge ? '#a78bfa' : speedColor(ss.speed)}">${stop.isHomeCharge ? '🏁' : '#' + (i + 1)}</div>
             <div class="stop-main">
-              <span class="stop-loc">${escapeHtml(stop.location || 'Stop ' + (i + 1))}</span>
+              <span class="stop-loc">${escapeHtml(stop.location || 'Stop ' + (i + 1))}<span class="power-badge ${stop.power === 'ac' ? 'ac' : 'dc'}">${stop.power === 'ac' ? 'AC' : 'DC'}</span></span>
               <span class="stop-sub">${f1(stop.kwh)} kWh · ${fc(stop.cost)}</span>
             </div>
             <div class="stop-meta">${stop.minutes} min<br>${f0(ss.speed)} kW</div>
@@ -1113,7 +1273,10 @@ function renderTripDetail() {
               <div class="detail-item"><div class="detail-key">mi/kWh</div><div class="detail-val">${ss.miPkwh != null ? f2(ss.miPkwh) + (ss.isEstMi || !ss.usedLegKwh ? '~' : '') : '—'}</div></div>
               <div class="detail-item"><div class="detail-key">Wh/mi</div><div class="detail-val">${ss.whPmi != null ? f0(ss.whPmi) + (ss.isEstMi || !ss.usedLegKwh ? '~' : '') : '—'}</div></div>
             </div>
-            <button class="delete-btn" data-delete-stop="${stop.id}">Delete Stop</button>
+            <div class="stop-actions">
+              <button class="edit-btn" data-edit-stop="${stop.id}">Edit Stop</button>
+              <button class="delete-btn" data-delete-stop="${stop.id}">Delete Stop</button>
+            </div>
           </div>
         </div>
       `;
@@ -1133,25 +1296,26 @@ function lastDepartSoc(trip) {
   return trip.startSoc;
 }
 
-// Pure calculation: returns home-charge figures, or null if inputs incomplete.
 // Pure calculation from explicit inputs; returns figures or null if incomplete.
-function computeHomeCharge(trip, milesHome, rate, chargerKw) {
-  const lastSoc = lastDepartSoc(trip);
-  if (lastSoc == null || milesHome == null || isNaN(milesHome)) return null;
+// startSoc/targetSoc define the charge window (e.g. 23% → 80%). milesHome is
+// optional and used only for the descriptive note.
+function computeHomeCharge(trip, startSoc, targetSoc, milesHome, rate, chargerKw) {
+  if (startSoc == null || isNaN(startSoc)) return null;
+  const target = (targetSoc == null || isNaN(targetSoc)) ? 100 : targetSoc;
+  const startC = Math.min(100, Math.max(0, startSoc));
+  const targetC = Math.min(100, Math.max(0, target));
+  if (targetC <= startC) return null;
 
-  const ts = tripStats(trip);
-  const effMiPkwh = ts.avgMiPkwh > 0 ? ts.avgMiPkwh : MILES_PER_KWH;
-  const kwhUsedDriving = milesHome / effMiPkwh;
-  const socUsedDriving = (kwhUsedDriving / BATTERY_CAPACITY_KWH) * 100;
-  const arrivalSoc = Math.max(0, lastSoc - socUsedDriving);
-  const socNeeded = Math.max(0, 100 - arrivalSoc);
+  const socNeeded = targetC - startC;
   const kwhNeeded = (socNeeded / 100) * BATTERY_CAPACITY_KWH;
   const hasCost = rate != null && !isNaN(rate);
   const cost = hasCost ? kwhNeeded * rate : 0;
   const timeHrs = (chargerKw != null && !isNaN(chargerKw) && chargerKw > 0) ? kwhNeeded / chargerKw : null;
   const minutes = timeHrs != null ? Math.round(timeHrs * 60) : 0;
+  const hasMiles = milesHome != null && !isNaN(milesHome);
 
-  return { arrivalSoc, kwhNeeded, cost, minutes, milesHome, effMiPkwh, lastSoc, hasCost, timeHrs, chargerKw };
+  return { startSoc: startC, targetSoc: targetC, kwhNeeded, cost, minutes,
+           milesHome: hasMiles ? milesHome : null, hasMiles, hasCost, timeHrs, chargerKw };
 }
 
 // Live preview shown inside the Add Charging Stop form when in Home Charge mode.
@@ -1160,30 +1324,46 @@ function renderHomePreview() {
   const box = document.getElementById('home-preview');
   if (!trip) { box.innerHTML = ''; return; }
 
+  const bs = parseFloat(document.getElementById('h-batt-start').value);
+  const bt = parseFloat(document.getElementById('h-batt-target').value);
   const m = parseFloat(document.getElementById('h-miles').value);
   const r = parseFloat(document.getElementById('h-rate').value);
   const ck = parseFloat(document.getElementById('h-charger-kw').value);
-  const p = computeHomeCharge(trip, isNaN(m) ? null : m, isNaN(r) ? null : r, isNaN(ck) ? null : ck);
+  const p = computeHomeCharge(trip, isNaN(bs) ? null : bs, isNaN(bt) ? null : bt,
+                              isNaN(m) ? null : m, isNaN(r) ? null : r, isNaN(ck) ? null : ck);
 
   if (!p) { box.innerHTML = ''; return; }
 
   box.innerHTML = `
     <div class="home-result-grid">
-      <div class="home-result-item"><div class="home-result-val" style="color:#f0b429">${f0(p.arrivalSoc)}%</div><div class="home-result-label">Arrive Home</div></div>
-      <div class="home-result-item"><div class="home-result-val" style="color:#00e5ff">${f1(p.kwhNeeded)}</div><div class="home-result-label">kWh to 100%</div></div>
+      <div class="home-result-item"><div class="home-result-val" style="color:#f0b429">${f0(p.startSoc)}→${f0(p.targetSoc)}%</div><div class="home-result-label">Charge</div></div>
+      <div class="home-result-item"><div class="home-result-val" style="color:#00e5ff">${f1(p.kwhNeeded)}</div><div class="home-result-label">kWh added</div></div>
       <div class="home-result-item"><div class="home-result-val" style="color:#a78bfa">${p.hasCost ? fc(p.cost) : '—'}</div><div class="home-result-label">Est. Cost</div></div>
     </div>
     ${p.timeHrs != null ? `<div class="home-note">≈ ${p.timeHrs < 1 ? f0(p.timeHrs * 60) + ' min' : f1(p.timeHrs) + ' hrs'} on a ${f1(p.chargerKw)} kW Level 2 charger.</div>` : ''}
-    <div class="home-note">Based on ${f0(p.lastSoc)}% departing last stop, ${f1(p.effMiPkwh)} mi/kWh trip efficiency, and ${f0(p.milesHome)} mi to home.</div>
+    <div class="home-note">Charging from ${f0(p.startSoc)}% to ${f0(p.targetSoc)}% adds ${f1(p.kwhNeeded)} kWh${p.hasMiles ? ` · ${f0(p.milesHome)} mi driven to destination` : ''}.</div>
   `;
 }
 
 // Recompute the live preview as home-charge inputs change
-['h-miles','h-rate','h-charger-kw'].forEach(id => {
+['h-batt-start','h-batt-target','h-miles','h-rate','h-charger-kw'].forEach(id => {
   document.getElementById(id).addEventListener('input', renderHomePreview);
 });
 
+document.getElementById('power-tabs').addEventListener('click', e => {
+  const btn = e.target.closest('[data-filter]');
+  if (!btn) return;
+  powerFilter = btn.dataset.filter;
+  renderTripDetail();
+});
+
 document.getElementById('trip-route').addEventListener('click', e => {
+  const edit = e.target.closest('[data-edit-stop]');
+  if (edit) {
+    const id = parseInt(edit.dataset.editStop);
+    openEditStop(id);
+    return;
+  }
   const del = e.target.closest('[data-delete-stop]');
   if (del) {
     const id = parseInt(del.dataset.deleteStop);
@@ -1205,6 +1385,8 @@ document.getElementById('trip-route').addEventListener('click', e => {
 
 // ── Render: Add Stop ─────────────────────────────────────────────────────────
 let legType = 'enroute'; // 'first' | 'enroute' | 'home'
+let stopPower = 'dc';    // 'dc' | 'ac' for the standard stop form
+let editingStopId = null; // when set, the Add Stop form is editing an existing stop
 
 document.getElementById('leg-toggle').addEventListener('click', e => {
   const btn = e.target.closest('[data-leg]');
@@ -1214,14 +1396,33 @@ document.getElementById('leg-toggle').addEventListener('click', e => {
   applyLegMode();
 });
 
+document.getElementById('ac-dc-toggle').addEventListener('click', e => {
+  const btn = e.target.closest('[data-power]');
+  if (!btn) return;
+  stopPower = btn.dataset.power;
+  document.querySelectorAll('.ac-dc-btn').forEach(b => b.classList.toggle('active', b.dataset.power === stopPower));
+});
+
 // Show the right field group + button label + hint for the current mode
 function applyLegMode() {
   const isHome = legType === 'home';
+  const editing = editingStopId != null;
   document.getElementById('standard-fields').style.display = isHome ? 'none' : '';
   document.getElementById('home-fields').style.display = isHome ? '' : 'none';
-  document.getElementById('add-stop-btn').textContent = isHome ? '🏠 Add Home Charge' : '⚡ Add Charging Stop';
+  document.getElementById('add-stop-btn').textContent = editing
+    ? (isHome ? '🏁 Save Destination Charge' : '💾 Save Changes')
+    : (isHome ? '🏁 Add Destination Charge' : '⚡ Add Charging Stop');
   updateAddStopHint();
-  if (isHome) renderHomePreview();
+  if (isHome) {
+    // Convenience: prefill start battery with the last logged departure %
+    const trip = getTrip(currentTripId);
+    const startField = document.getElementById('h-batt-start');
+    if (trip && startField && !startField.value) {
+      const lastSoc = lastDepartSoc(trip);
+      if (lastSoc != null) startField.value = f0(lastSoc);
+    }
+    renderHomePreview();
+  }
 }
 
 function updateAddStopHint() {
@@ -1241,9 +1442,9 @@ function updateAddStopHint() {
     const lastSoc = lastDepartSoc(trip);
     const lastLoc = trip.stops.length ? trip.stops[trip.stops.length - 1].location : trip.startLocation;
     if (lastSoc != null) {
-      hint.innerHTML = `Final leg home from <b>${escapeHtml(lastLoc || 'last stop')}</b> at <b>${f0(lastSoc)}%</b>. Enter miles to home and we'll calculate the Level 2 charge back to 100%.`;
+      hint.innerHTML = `Final leg to destination from <b>${escapeHtml(lastLoc || 'last stop')}</b> at <b>${f0(lastSoc)}%</b>. Enter the battery % you plug in at and your target charge level.`;
     } else {
-      hint.innerHTML = `Final leg home. Log a departure battery % at a prior stop first so we can estimate the home charge.`;
+      hint.innerHTML = `Final leg to destination. Enter the battery % you plug in at and your target charge level.`;
     }
   } else if (legType === 'first') {
     hint.innerHTML = `First charging stop departing <b>${escapeHtml(trip.startLocation || 'start')}</b>${prevSoc != null ? ` at <b>${f0(prevSoc)}%</b>` : ''}. Enter battery % on arrival here to calculate efficiency for this leg.`;
@@ -1260,19 +1461,55 @@ function renderAddStop() {
   const trip = getTrip(currentTripId);
   if (!trip) { switchView('trips'); return; }
 
-  // Auto-select leg type based on stop count (default to first/enroute, never home)
-  legType = trip.stops.length === 0 ? 'first' : 'enroute';
-  document.querySelectorAll('.leg-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.leg === legType));
-
+  // Clear all fields first
   ['s-loc','s-batt-arrive','s-miles','s-minutes','s-kwh','s-batt-depart','s-cost',
-   'h-miles','h-rate','h-charger-kw'].forEach(id => {
+   'h-batt-start','h-batt-target','h-miles','h-rate','h-charger-kw'].forEach(id => {
     document.getElementById(id).value = '';
   });
   document.getElementById('home-preview').innerHTML = '';
   document.getElementById('loc-status').textContent = '';
   document.getElementById('loc-status').classList.remove('error');
 
+  const editing = editingStopId != null ? trip.stops.find(s => s.id === editingStopId) : null;
+
+  if (editing) {
+    // ── Edit mode: load the stop's values ──
+    if (editing.isHomeCharge) {
+      legType = 'home';
+      document.getElementById('h-batt-start').value = editing.battArrive != null ? f0(editing.battArrive) : '';
+      document.getElementById('h-batt-target').value = editing.battDepart != null ? f0(editing.battDepart) : '';
+      if (editing.miles != null) document.getElementById('h-miles').value = editing.miles;
+      if (editing.homeRate != null) document.getElementById('h-rate').value = editing.homeRate;
+      if (editing.chargerKw != null) document.getElementById('h-charger-kw').value = editing.chargerKw;
+    } else {
+      const idx = trip.stops.findIndex(s => s.id === editing.id);
+      legType = idx === 0 ? 'first' : 'enroute';
+      stopPower = editing.power === 'ac' ? 'ac' : 'dc';
+      document.getElementById('s-loc').value = editing.location || '';
+      if (editing.battArrive != null) document.getElementById('s-batt-arrive').value = f0(editing.battArrive);
+      if (editing.miles != null) document.getElementById('s-miles').value = editing.miles;
+      document.getElementById('s-minutes').value = editing.minutes;
+      document.getElementById('s-kwh').value = editing.kwh;
+      if (editing.battDepart != null) document.getElementById('s-batt-depart').value = f0(editing.battDepart);
+      document.getElementById('s-cost').value = editing.cost;
+    }
+  } else {
+    // ── Add mode: auto-select leg type based on stop count ──
+    legType = trip.stops.length === 0 ? 'first' : 'enroute';
+    stopPower = 'dc';
+  }
+
+  document.querySelectorAll('.leg-toggle-btn').forEach(b => b.classList.toggle('active', b.dataset.leg === legType));
+  document.querySelectorAll('.ac-dc-btn').forEach(b => b.classList.toggle('active', b.dataset.power === stopPower));
+  document.querySelector('#view-add-stop .section-head').textContent = editing ? 'Edit Charging Stop' : 'Add Charging Stop';
+
   applyLegMode();
+}
+
+// Open the Add Stop form pre-loaded with an existing stop for editing
+function openEditStop(id) {
+  editingStopId = id;
+  switchView('add-stop');
 }
 
 // ── Use-my-location (GPS + Nominatim reverse geocode) ─────────────────────────
@@ -1333,33 +1570,61 @@ document.getElementById('add-stop-btn').addEventListener('click', () => {
   const trip = getTrip(currentTripId);
   if (!trip) return;
 
-  // ── Home Charge mode ──
+  // ── Destination Charge mode ──
   if (legType === 'home') {
+    const bs = parseFloat(document.getElementById('h-batt-start').value);
+    const bt = parseFloat(document.getElementById('h-batt-target').value);
     const m = parseFloat(document.getElementById('h-miles').value);
     const r = parseFloat(document.getElementById('h-rate').value);
     const ck = parseFloat(document.getElementById('h-charger-kw').value);
 
-    if (isNaN(m)) { showToast('Enter miles to home'); return; }
-    if (lastDepartSoc(trip) == null) { showToast('No departure battery % logged yet'); return; }
+    if (isNaN(bs)) { showToast('Enter battery % at start'); return; }
+    if (isNaN(bt)) { showToast('Enter target charge %'); return; }
+    if (bt <= bs) { showToast('Target % must be above start %'); return; }
 
-    const p = computeHomeCharge(trip, m, isNaN(r) ? null : r, isNaN(ck) ? null : ck);
-    if (!p) { showToast('Could not calculate home charge'); return; }
+    const p = computeHomeCharge(trip, bs, bt, isNaN(m) ? null : m, isNaN(r) ? null : r, isNaN(ck) ? null : ck);
+    if (!p) { showToast('Could not calculate destination charge'); return; }
+
+    const editing = editingStopId != null ? trip.stops.find(s => s.id === editingStopId) : null;
+    if (editing) {
+      Object.assign(editing, {
+        location: 'Destination',
+        battArrive: p.startSoc,
+        miles: isNaN(m) ? null : m,
+        minutes: p.minutes,
+        kwh: p.kwhNeeded,
+        battDepart: p.targetSoc,
+        cost: p.cost,
+        isHomeCharge: true,
+        power: 'ac',
+        homeRate: isNaN(r) ? null : r,
+        chargerKw: isNaN(ck) ? null : ck,
+      });
+      editingStopId = null;
+      saveTrips();
+      showToast('Destination charge updated ✓');
+      switchView('trip-detail');
+      return;
+    }
 
     const newId = trip.stops.length ? Math.max(...trip.stops.map(s => s.id)) + 1 : 1;
     trip.stops.push({
       id: newId,
-      location: 'Home',
-      battArrive: p.arrivalSoc,
-      miles: p.milesHome,
+      location: 'Destination',
+      battArrive: p.startSoc,
+      miles: isNaN(m) ? null : m,
       minutes: p.minutes,
       kwh: p.kwhNeeded,
-      battDepart: 100,
+      battDepart: p.targetSoc,
       cost: p.cost,
       isHomeCharge: true,
       isLastLeg: true,
+      power: 'ac',
+      homeRate: isNaN(r) ? null : r,
+      chargerKw: isNaN(ck) ? null : ck,
     });
     saveTrips();
-    showToast('Home charge added ✓');
+    showToast('Destination charge added ✓');
     switchView('trip-detail');
     return;
   }
@@ -1383,6 +1648,25 @@ document.getElementById('add-stop-btn').addEventListener('click', () => {
     showToast('Departure % should be ≥ arrival %'); return;
   }
 
+  const editingStd = editingStopId != null ? trip.stops.find(s => s.id === editingStopId) : null;
+  if (editingStd) {
+    Object.assign(editingStd, {
+      location: loc || editingStd.location,
+      battArrive: battArriveC,
+      miles: isNaN(miles) ? null : miles,
+      minutes, kwh,
+      battDepart: battDepartC,
+      cost,
+      isHomeCharge: false,
+      power: stopPower,
+    });
+    editingStopId = null;
+    saveTrips();
+    showToast('Stop updated ✓');
+    switchView('trip-detail');
+    return;
+  }
+
   const newId = trip.stops.length ? Math.max(...trip.stops.map(s => s.id)) + 1 : 1;
   trip.stops.push({
     id: newId,
@@ -1394,6 +1678,7 @@ document.getElementById('add-stop-btn').addEventListener('click', () => {
     cost,
     isHomeCharge: false,
     isLastLeg: false,
+    power: stopPower,
   });
   saveTrips();
   showToast('Stop added ✓');
@@ -1401,9 +1686,133 @@ document.getElementById('add-stop-btn').addEventListener('click', () => {
 });
 
 // ── Print ────────────────────────────────────────────────────────────────────
-document.getElementById('print-nav-btn').addEventListener('click', () => {
-  if (!currentTripId) { showToast('Open a trip to print'); return; }
+// ── Share / Export as PDF ─────────────────────────────────────────────────────
+// Builds a trip PDF with jsPDF and hands it to the iOS share sheet (Messages,
+// Mail, Print, AirDrop, Save to Files…). Falls back to window.print() if the
+// PDF library or Web Share API with files isn't available.
+function buildTripPdf(trip) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const margin = 40;
+  let y = margin;
 
+  const ts = tripStats(trip);
+
+  // Header
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(18);
+  doc.text(trip.name || 'Trip', margin, y);
+  y += 16;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(120);
+  const sub = [trip.date ? formatDate(trip.date) : '', `Generated ${new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })}`].filter(Boolean).join('  ·  ');
+  doc.text(sub, margin, y);
+  y += 8;
+  doc.setDrawColor(0); doc.setLineWidth(1.2);
+  doc.line(margin, y, pageW - margin, y);
+  y += 18;
+
+  // Summary stats (two rows of four)
+  const stats = [
+    ['Total kWh', f1(ts.totalKwh)], ['Total Spent', fc(ts.totalCost)],
+    ['Avg Speed', f1(ts.avgSpeed) + ' kW'], ['Cost/kWh', fc(ts.costPerKwh)],
+    ['Total Miles', f0(ts.totalMiles) + ' mi'], ['Cost/Mile', fc(ts.costPerMile)],
+    ['mi/kWh', f2(ts.avgMiPkwh)], ['Wh/Mile', f0(ts.avgWhPmi)],
+  ];
+  doc.setFontSize(9);
+  const colW = (pageW - margin * 2) / 4;
+  stats.forEach((s, i) => {
+    const col = i % 4, row = Math.floor(i / 4);
+    const x = margin + col * colW;
+    const yy = y + row * 34;
+    doc.setTextColor(130); doc.setFont('helvetica', 'normal');
+    doc.text(s[0], x, yy);
+    doc.setTextColor(0); doc.setFont('helvetica', 'bold'); doc.setFontSize(12);
+    doc.text(String(s[1]), x, yy + 14);
+    doc.setFontSize(9);
+  });
+  y += 34 * 2 + 10;
+
+  // Start
+  doc.setDrawColor(200); doc.setLineWidth(0.5);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(0);
+  doc.text('Route', margin, y); y += 6;
+  doc.line(margin, y, pageW - margin, y); y += 16;
+
+  doc.setFontSize(10);
+  doc.text(`Start: ${trip.startLocation || 'Start'}`, margin, y);
+  doc.setFont('helvetica', 'normal'); doc.setTextColor(120);
+  if (trip.startSoc != null) doc.text(`${f0(trip.startSoc)}%`, pageW - margin, y, { align: 'right' });
+  y += 18;
+
+  // Stops
+  trip.stops.forEach((stop, i) => {
+    const ss = stopStats(trip, i);
+    if (y > 720) { doc.addPage(); y = margin; }
+
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(0);
+    doc.text(`${stop.isHomeCharge ? 'Destination' : '#' + (i + 1)}  ${stop.location || ''}`, margin, y);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(120);
+    doc.text(`${f1(stop.kwh)} kWh · ${fc(stop.cost)} · ${stop.minutes} min · ${f0(ss.speed)} kW`, margin, y + 13);
+
+    const milesTxt = stop.miles != null ? f0(stop.miles) + ' mi' : '~' + f0(stop.kwh * MILES_PER_KWH) + ' mi';
+    const battTxt = `${stop.battArrive != null ? f0(stop.battArrive) + '%' : '—'}→${stop.battDepart != null ? f0(stop.battDepart) + '%' : '—'}`;
+    const effTxt = ss.miPkwh != null ? `${f2(ss.miPkwh)} mi/kWh` : '';
+    doc.text([milesTxt, battTxt, `${fc(ss.cpk)}/kWh`, effTxt].filter(Boolean).join('   ·   '), pageW - margin, y, { align: 'right' });
+
+    y += 26;
+    doc.setDrawColor(235); doc.line(margin, y - 6, pageW - margin, y - 6);
+  });
+
+  return doc;
+}
+
+async function shareTrip() {
+  if (!currentTripId) { showToast('Open a trip to share'); return; }
+  const trip = getTrip(currentTripId);
+  if (!trip) { showToast('Open a trip to share'); return; }
+
+  // Fall back to the print sheet if jsPDF didn't load (e.g. offline first run)
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    showToast('Opening print view…');
+    legacyPrint();
+    return;
+  }
+
+  let doc;
+  try {
+    doc = buildTripPdf(trip);
+  } catch (e) {
+    showToast('Could not build PDF — printing instead');
+    legacyPrint();
+    return;
+  }
+
+  const safeName = (trip.name || 'trip').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+  const fileName = `lightning-log-${safeName}.pdf`;
+  const blob = doc.output('blob');
+  const file = new File([blob], fileName, { type: 'application/pdf' });
+
+  // Preferred path: native share sheet with the PDF file
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: trip.name || 'Trip', text: `${trip.name || 'Trip'} — Lightning Log` });
+      return;
+    } catch (e) {
+      if (e && e.name === 'AbortError') return; // user cancelled
+    }
+  }
+
+  // Fallback: download the PDF so the user can text/email/print it manually
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = fileName;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  showToast('PDF downloaded');
+}
+
+// Original print-sheet flow, kept as a fallback
+function legacyPrint() {
   document.getElementById('print-timestamp').textContent =
     'Printed ' + new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -1423,9 +1832,12 @@ document.getElementById('print-nav-btn').addEventListener('click', () => {
   } else {
     finish();
   }
-});
+}
+
+document.getElementById('print-nav-btn').addEventListener('click', shareTrip);
 
 // ── Init ──────────────────────────────────────────────────────────────────────
+document.getElementById('rev-tag').textContent = APP_REVISION;
 switchView('trips');
 </script>
 </body>
